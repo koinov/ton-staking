@@ -1,5 +1,7 @@
 # Staking pool for Telegram Open Network 
 
+Fully decentralized solution based on mutual mistrust principle at the crossroad of blockchain, finance and security. 
+
 ## Problematics
 
 Telegram Open Networks consensus is based on Byzantine Fault Tolerant Proof of Stake that involves sending certain amount of grams to take part in validators elections. Election result depends on stake, and there’s also significant amount of grams required. Running the validation node requires technical skills and extra hosting costs. So, being the part of TON network and get benefits staking is rather difficult story for common people. 
@@ -10,7 +12,7 @@ Running TON node estimated at about US$200/month, so it is about US$2400/year. I
 
 ### Security
 
-Security is another corner stone. Any kind of crypto related operations require proper keys management. Any centralized pool is potentially vulnerable to hackers attacks and fraudulent operator threat. 
+Security is another cornerstone. Any kind of crypto related operations require proper keys management. Any centralized pool is potentially vulnerable to hackers attacks and fraudulent operator threat. 
 
 ## Solution 
 
@@ -229,6 +231,7 @@ Please excuse rather raw level of solution, but it was physically impossible for
 - [ ] Add staking management to owner's console
 - [ ] Add interaction with Nodes to owner's console
 - [ ] Implement automatic election management maximizing profits
+- [ ] Telegram bot
 
 
 ## Building
