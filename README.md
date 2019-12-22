@@ -6,7 +6,7 @@ Telegram Open Networks consensus is based on Byzantine Fault Tolerant Proof of S
 
 ### Operational costs
 
-Running TON node estimated at about US$200/ month, so it is about US$2400/year. If we imagine 10% annual return, that means that minimum investment of US$24000 is required only to cover hardware, and if the person is not a computer savvy and requires inhouse person who handles node operations, updates the software, for example paying the salary 1000$/month, that means US$150000 is required to cover fixed costs. To achieve 5% ROI US$300000 is required. If we imagine that 10% can be achieved only from the Grams at stake, it means US$600000 is required to yearn US$15000 year, that is 2.5% ROI. So individual staking becomes not an attractive option, however having US$5.000.000 under management, when only half is at stake making 10% annual ROI, 5% of annual return is looking quite real. So amount of Grams under management is the most important part of TON staking. 
+Running TON node estimated at about US$200/month, so it is about US$2400/year. If we imagine 10% annual return, that means that minimum investment of US$24000 is required only to cover the hardware, and if the holder is not a computer savvy and requires an in-house person, who handles node operations, updates the software, for example paying the salary 1000$/month, that means US$150000 is required to cover fixed costs. To achieve 5% ROI US$300000 is required. If we imagine that 10% can be achieved only from the Grams at stake, it means US$600000 is required to earn US$15000 anually, that is 2.5% ROI. So individual staking becomes not an attractive option, however having US$5.000.000 under management, when only half is at stake making 10% annual ROI, 5% of annual return is looking quite real. So amount of Grams under management is the most important part of TON staking. 
 
 ### Security
 
@@ -44,9 +44,9 @@ Staking pool solution consist of a number of modules:
 5. frontend (react, based on free Material Dashboard theme by Creative Tim)
 6. json-rpc server for providing data to frontend (c++)
 
-### Files structure 
+### Folders 
 
-Staking pool solution build on TON original code to utilize the most of performance and reliability of its code. We did our best to separate it from original parts to keep updating process smooth and convenient, so all files are kept withing [/staking]() folder. 
+Staking pool solution build on top of TON original code and utilizes the most of performance and reliability of its stack. I did my best to separate it from original parts to keep updating process smooth and convenient, so all files are kept within [staking](/staking) folder. 
 
 - [smartcont](/staking/smartcont) smart contracts
 - [staking-smc-envelope](/staking/staking-smc-envelope) smc envelopes
@@ -57,15 +57,17 @@ Staking pool solution build on TON original code to utilize the most of performa
 
 ### Smart contracts
 
-To assure subscribers, that no additioal changes are possible, we implement predeployed smart contract structure, so intitially pool is deployed with predefined number of nominators, when each nominator holds an address of the pool. Such deployemnt scheme allows to link contracts between each other and to avoid the situation when owner replaces any contract with the one, that allows get an access to subscribers Grams. 
+To assure subscribers, that no changes are possible in future, I implemented linked smart contract structure, so intitially `pool` is deployed with predefined number of `nominator` smart contract addresses, when each `nominator` holds an address of the `pool`. Such deployment scheme allows linking contracts between each other even before deployment and avoiding the situation, when owner replaces any contract with fraudulent or vulnerable one, and prevents from getting an unathorized access to subscribers Grams. 
+
+All `staking pool` and `nominator` smart contracts do not work with external messages to avoid the situation, when draining funds is possible because of private key leak.  
 
 #### Pool smart contract
 
-Accounting smart contract is responsible for interacting with users, collecting  transfers, calculating rewards, transferring funds between pool and nominators, sending orders to make stakes.
+`Pool` is accounting and management smart contract that is responsible for interacting with users, collecting  transfers, calculating rewards, transferring funds between `pool` and `nominators`, sending orders to make stakes.
 
 #### Nominator smart contract.
 
-Nominator interacts with pool and elector smart contract. It’s prime function is making stakes and sending balance and current stake to pool smart contract. Grams from this contract can be transferred to elector and pool smart contracts only.  
+`Nominator` interacts with `pool` and `elector` smart contract. It’s prime function is making stakes and sending report about balance and current stake to `pool` smart contract. Grams from this contract can be transferred to `elector` and `pool` smart contracts only.  
 
 
 ## Entities
@@ -100,21 +102,66 @@ Smart contract need to fetch balances and stakes from all nominators, subtract w
 
 ## Interface 
 
-The main aim was in achievement smooth interaction process with smart contracts, especially for subscribers. So, we implemented react frontend that represents data of the pool contract through json-rpc server and allows users to deposit and withdraw funds from any TON wallet by the simple transfer. 
+The main aim was in achievement smooth interaction process with smart contracts, especially for subscribers. So, I implemented react frontend that represents data of the pool contract through json-rpc server and allows users to deposit and withdraw funds from any TON wallet by the simple transfer. 
 
-To issue new subscription or add funds to the current one, subscriber transfers amount if grams he wants to put at stake without any text. 
+To issue new subscription or add funds to the current one, the subscriber transfers amount of grams he wants to put at stake without any text. 
 
-To redeem subscription subscriber sends simple transfer of minimum amount (0.1 gramm) with a text comment containing the subscription number (R77 to redeem subscription #77)
+To redeem subscription subscriber sends simple transfer of minimum amount (0.1 gramm) with a text comment containing the subscription number (for example, R77 to redeem subscription #77 that was issued for the same address)
 
 
 ### User interface
 
+User interface is implemented as webpage built with React.js interacting with JSON RPC server, that provides all the information from smart contracts to end user. 
+
+Subscriptions and redemptions handled by `pool` smart contract by analysing transfers received. 
+
+
+#### Overall performance
+
+Provides information about pool performance. 
+
+![](/staking/img/screenshot9.png)
+
+*Demo data*
+
+#### Current subscriptions
+
+Shows current subscriptions for specified address. New subscriptions and redemptions dialogs appears here. 
+
+![](/staking/img/screenshot2.png)
+
+#### Subscription 
+
+Subscriber sends amount of grams to Smart contract, so new subscription is issued. If there's a subscriptino in the current period, grams are added to this entry.
+
+![](/staking/img/screenshot6.png)
+
+
+#### Redemption
+
+Redemption procedure can be called by sending subscription number in text field of text message (UTF-8 encoding only, tested with Android TON Wallet) 
+![](/staking/img/screenshot8.png)
+
+#### Staking Pool
+
+Shows detailed information about pool performance by periods including AUM, total number of units, unit rate, subscriptinos and redemptions within each period. 
+
+![](/staking/img/screenshot3.png)
+
+#### Nominators
+
+Show the information about current balances and stakes of `nominator` smart contracts connected to pool.
+
+![](/staking/img/screenshot4.png)
+
 
 ### Owner's console
 
-Owners console is based on tonlib_cli utility to get all the benefits from native code, key management and achieves the best flexibility level for future TON updates. 
+Owners console is based on tonlib_cli utility so it gets all the benefits from native code, key management and achieves the best flexibility level for future TON updates. 
 
-It operates four types of smart contracts : WalletV3, Pool and Nominator, allows simple deployment and interaction for the pool owner. 
+It operates three types of smart contracts : WalletV3, Pool and Nominator, allows simple deployment and interaction for the pool owner. Multisig support must be added later. 
+
+
 
 Console has additional commands implementes:
 
@@ -148,21 +195,23 @@ key_id - private key in the key storage
 command - sns (set nominator status) / pr ( close period ) / ...
 ```
 
+*Will continue developing owners console, however all network interaction processes are covered in current version*
+
 
 ## Road map
 
-Please understand, this was physically impossible for me to implement all the part of this project in two weeks and make the product out of it, and pay toomuch attention to the details, however I made strong Proof-of-concept covering all basic aspects, removing major concerns, and make sure this project can be successfully elevated to to production level.
+Please excuse rather raw level of solution, but it was physically impossible for me to implement all the parts of this rather complicated project on the edge of blockchain and finances in two weeks, and make perfect product out of it. I didn't pay too much attention to the details, however I made strong Proof-of-concept covering all basic aspects, removing major concerns, and assuring this project can be successfully elevated to the production level. I guess it will take me couple more month make it real, especially if next round of competition will be connected with running validator, so I will cover TODOs related to staking and validation.
 
 
 ### DONE
 
 - [X] Accounting on smart contract 
-- [X] Interaction with elector smart contract that allows getting current stake
-- [X] Secured deployment scheme when contracts are linked between each other before deployment
-- [X] Secured funds transfer scheme when Grams can be transferred between trusted smart contracts, subscriber can redeem Grams anytime, Owner dont's have an access to the funds
-- [X] Console that allows working with new smart contracts without affecting actual TON code and built on the top of its stack
-- [X] JSON RPC Server built on top of TON stack, that easily reads all the infromation required from new smart contracts
-- [X] Simple web user interface that interacts with JSON RPC server and shows all the information in the convenient way
+- [X] Interaction with elector smart contract, that allows calculating current stake and include it in AUM
+- [X] Secured deployment scheme, when contracts are linked between each other before deployment
+- [X] Secured funds transfer scheme, when Grams can be transferred between trusted smart contracts only, subscriber can redeem Grams anytime, Owner doesnt's have an access to the Grams
+- [X] Owner's Console that allows working with new types smart contracts without affecting actual TON code and is built on the top of its stack
+- [X] JSON RPC Server, that is written in C++ and built on top of TON stack, that fetches all the information from new smart contracts
+- [X] Simple web user interface, that interacts with JSON RPC server and shows all the information in the convenient way
 - [X] Subscription and redemption from any TON wallet, with or without QR codes
 
 ### TODO
@@ -173,7 +222,9 @@ Please understand, this was physically impossible for me to implement all the pa
 - [ ] Changing owner procedure
 - [ ] Handling redemption requests when pool smart contract doesn't have enough funds (nominators should return funds to pool in this case)
 - [ ] Add operator role, so stakes can be handled by third party
-- [ ] Multisig console (to use wallet as an owner wallet for better convenience)
+- [ ] Support Multisig in console (to use multisig wallet as an owner wallet for better convenience)
+- [ ] Emergency shutdown (to handle code updates or the situation when keys of the owners wallet are compromised, technically means returnign all subscriptions and starting new structure)
+- [ ] Redeemed subscription entries deletion from smart contract
 - [ ] Add election support to owner's console
 - [ ] Add staking management to owner's console
 - [ ] Add interaction with Nodes to owner's console
@@ -182,7 +233,18 @@ Please understand, this was physically impossible for me to implement all the pa
 
 ## Building
 
-Project is built as TON blockchain. 
+### Additional dependencies
+
+To run `staking-server` additional cinemast libraries and header files are required. I didn't include Cinemast JSON-RPC in the building. 
+
+Please follow the instruction at https://github.com/cinemast/libjson-rpc-cpp to install additional dependencies.
+
+
+### Staking utilities 
+
+
+Project is a fork of original https://github.com/ton-blockchain/ton project and can be built the same way:
+
 ```
 mkdir build
 cd build
@@ -190,27 +252,78 @@ CMAKE ..
 MAKE
 ```
 
-'staking' folder will contain following files:
-staking-server 
-staking-cli 
+'build/staking' folder will contain following files:
 
-Smark contracts can be deployed from 'staking-cli' by running:
-getaddres owner
-getaddres pool
-getaddress nominator 1
-getaddress nominator 2
+- staking-server 
+- staking-cli 
 
 
-Frontend can be built from staking/frontend folder by running
+`staking-server` starts with -C and -P parameters, where C is a path to lite-client config file and P is the address of pool smart contract. Server is listening on 6310 port. Please make sure read-write permissions are given to the folder containing server. 
+
+### Deploying smart contracts 
+
+Smart contracts can be deployed from `staking-cli` by running:
+```
+getaddres #0 owner
+getaddres #0 pool
+getaddress #0 nominator 1
+getaddress #0 nominator 2
+```
+funding contracts and running:
+```
+init #0 owner
+init #0 pool
+init #0 nominator 1
+init #0 nominator 2
+```
+Where #0 is the key from yoru key store. 
+
+### Frontend
+
+Frontend can be built from staking/frontend folder by running:
+```
+yarn build
+```
+
+Development environment can be run by:
 ```
 yarn start
 ```
 
+
+### Tests 
+
+There was not enough time to test all parts of the solution properly, 
+however the batch of online and offline tests written in C++ on top of tonlib_api are implemented. 
+`test` folder contains test sources. Executable files are genereted while building and are located in the `build` folder along with other tests. 
+
+External audit of this solution is extremely wanted before the launch. 
+
+### Demo
+
+Please check user interface at:
+
+http://62.210.101.33/
+
+Pool smart contract is deployed at:
+
+EQDbquWDvZ+bRNyROGf6SrMsUMtnVLVXDVmMMztF9siuganN
+
+
 ## Conculsion
 
-Staking becomes new mining for modern blockchains. Many people are gettign involved in staking and TON cen be an ideal extension to their crypto porfolios. 
+Staking becomes new mining for modern blockchains. Many people are getting involved in staking, and TON can be an ideal extension to their crypto porfolio. 
 
-I really hope Staking Pool project will make positiove effect by attracting more attention to TON technology and will launched along with TON mainnet however launching this project is not just a question of technology, but building community arround this, so any kind of appreciation from TON team wouldn't be overestimated!
+I really hope Staking Pool project will make positive effect by attracting more attention to TON technology and will launched along with TON mainnet however launching this project is not just a question of technology, but building community arround this, so any kind of appreciation from TON team wouldn't be overestimated!
+
+Sincerely yours, Eugene Koinov 
+
+[@koinoff](https://t.me/koinoff)
+
+[koinoff@gmail.com](mailto:koinoff@gmail.com)
+
+
+
 
 
 
