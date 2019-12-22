@@ -31,8 +31,6 @@ const auto& get_map() {
     auto with_tvm_code = [&](auto name, td::Slice code_str) {
       map[name] = vm::std_boc_deserialize(td::base64_decode(code_str).move_as_ok()).move_as_ok();
     };
-#include "smartcont/auto/wallet-code.cpp"
-#include "smartcont/auto/highload-wallet-code.cpp"
 #include "smartcont/auto/staking-pool-code.cpp"
 #include "smartcont/auto/elector-code.cpp"
 #include "smartcont/auto/nominator-code.cpp"
@@ -49,10 +47,6 @@ td::Result<td::Ref<vm::Cell>> StakingSmartContractCode::load(td::Slice name) {
     return td::Status::Error(PSLICE() << "Can't load td::ref<vm::cell " << name);
   }
   return it->second;
-}
-td::Ref<vm::Cell> StakingSmartContractCode::wallet() {
-  auto res = load("wallet").move_as_ok();
-  return res;
 }
 
 td::Ref<vm::Cell> StakingSmartContractCode::elector() {

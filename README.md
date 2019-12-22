@@ -246,6 +246,10 @@ Please follow the instruction at https://github.com/cinemast/libjson-rpc-cpp to 
 Project is a fork of original https://github.com/ton-blockchain/ton project and can be built the same way:
 
 ```
+git clone https://github.com/koinov/ton-staking.git
+cd ton-staking
+git submodule init
+git submodule update --recursive 
 mkdir build
 cd build
 CMAKE ..

@@ -28,7 +28,7 @@ add_library(staking-smc-envelope ${STAKING_SMC_ENVELOPE_SOURCE})
 target_include_directories(staking-smc-envelope PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
 target_link_libraries(staking-smc-envelope PUBLIC ton_crypto PRIVATE tdutils ton_block)
 if (NOT CMAKE_CROSSCOMPILING)
-  add_dependencies(staking-smc-envelope gen_staking_fif)
+  add_dependencies(smc-envelope staking-smc-envelope gen_staking_fif)
 endif()
 
 
