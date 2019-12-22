@@ -1,0 +1,477 @@
+// automatically generated from `smartcont/stdlib.fc` `smartcont/nominator-code.fc` 
+PROGRAM{
+  DECLPROC pack_state
+  DECLPROC unpack_state
+  DECLPROC unpack_stake_order
+  DECLPROC pack_stake_order
+  DECLPROC send_message
+  DECLPROC get_elector_addr_s
+  DECLPROC get_elector_addr
+  DECLPROC process_simple_transfer
+  DECLPROC process_return_stake
+  DECLPROC process_confirm_stake
+  DECLPROC process_recover_stake
+  DECLPROC process_stake
+  DECLPROC process_recover_stake_request
+  DECLPROC process_withdraw_request
+  DECLPROC process_update_balance_request
+  DECLPROC recv_internal
+  DECLPROC try_init
+  DECLPROC recv_external
+  pack_state PROCREF:<{
+    //  initialized pool_address wallet_id stake_at stake_sent balance stake
+    NEWC	//  initialized pool_address wallet_id stake_at stake_sent balance stake _7
+    s1 s7 XCHG	//  stake pool_address wallet_id stake_at stake_sent balance initialized _7
+    1 STU	//  stake pool_address wallet_id stake_at stake_sent balance _9
+    s1 s5 XCHG	//  stake balance wallet_id stake_at stake_sent pool_address _9
+    256 STU	//  stake balance wallet_id stake_at stake_sent _11
+    s1 s3 XCHG	//  stake balance stake_sent stake_at wallet_id _11
+    32 STU	//  stake balance stake_sent stake_at _13
+    32 STU	//  stake balance stake_sent _15
+    SWAP	//  stake balance _15 stake_sent
+    STGRAMS	//  stake balance _16
+    SWAP	//  stake _16 balance
+    STGRAMS	//  stake _17
+    SWAP	//  _17 stake
+    STGRAMS	//  _18
+    ENDC	//  _19
+  }>
+  unpack_state PROCREF:<{
+    //  ds
+    DROP	// 
+    c4 PUSH	//  _2
+    CTOS	//  ds
+    1 LDU	//  _11 ds
+    256 LDU	//  _11 _14 ds
+    32 LDU	//  _11 _14 _17 ds
+    32 LDU	//  _11 _14 _17 _20 ds
+    LDGRAMS	//  _11 _14 _17 _20 _23 ds
+    LDGRAMS	//  _11 _14 _17 _20 _23 _25 ds
+    LDGRAMS	//  initialized pool_address wallet_id stake_at stake_sent balance stake ds
+    ENDS
+  }>
+  unpack_stake_order PROCREF:<{
+    //  cs
+    256 LDU	//  validator_pubkey cs
+    32 LDU	//  validator_pubkey stake_at cs
+    32 LDU	//  validator_pubkey stake_at max_factor cs
+    256 LDU	//  validator_pubkey stake_at max_factor adnl_address cs
+    LDREF	//  validator_pubkey stake_at max_factor adnl_address _32 _31
+    DROP	//  validator_pubkey stake_at max_factor adnl_address _18
+    CTOS	//  validator_pubkey stake_at max_factor adnl_address _20
+    9 PUSHPOW2	//  validator_pubkey stake_at max_factor adnl_address _20 _21=512
+    PLDSLICEX	//  validator_pubkey stake_at max_factor adnl_address signature
+  }>
+  pack_stake_order PROCREF:<{
+    //  validator_pubkey stake_at max_factor adnl_address signature
+    NEWC	//  validator_pubkey stake_at max_factor adnl_address signature _5
+    SWAP	//  validator_pubkey stake_at max_factor adnl_address _5 signature
+    STSLICER	//  validator_pubkey stake_at max_factor adnl_address _6
+    ENDC	//  validator_pubkey stake_at max_factor adnl_address _7
+    NEWC	//  validator_pubkey stake_at max_factor adnl_address _7 _8
+    s1 s5 XCHG	//  _7 stake_at max_factor adnl_address validator_pubkey _8
+    256 STU	//  _7 stake_at max_factor adnl_address _10
+    s1 s3 XCHG	//  _7 adnl_address max_factor stake_at _10
+    32 STU	//  _7 adnl_address max_factor _12
+    32 STU	//  _7 adnl_address _14
+    256 STU	//  _7 _16
+    STREF	//  _17
+  }>
+  send_message PROC:<{
+    //  addr op query_id body grams mode
+    0 PUSHINT	//  addr op query_id body grams mode _7=0
+    24 PUSHINT	//  addr op query_id body grams mode _7=0 _8=24
+    NEWC	//  addr op query_id body grams mode _7=0 _8=24 _9
+    6 STU	//  addr op query_id body grams mode _7=0 _11
+    s0 s7 XCHG2	//  _7=0 op query_id body grams mode _11 addr
+    STSLICER	//  _7=0 op query_id body grams mode _12
+    ROT	//  _7=0 op query_id body mode _12 grams
+    STGRAMS	//  _7=0 op query_id body mode _13
+    s1 s5 XCHG	//  mode op query_id body _7=0 _13
+    107 STU	//  mode op query_id body _27
+    s1 s3 XCHG	//  mode body query_id op _27
+    32 STU	//  mode body query_id _29
+    64 STU	//  mode body _31
+    SWAP	//  mode _31 body
+    STSLICER	//  mode msg
+    ENDC	//  mode _33
+    SWAP	//  _33 mode
+    SENDRAWMSG
+  }>
+  get_elector_addr_s PROC:<{
+    // 
+    -1 PUSHINT	//  _0=-1
+    6 PUSHINT	//  _0=-1 _1=6
+    NEWC	//  _0=-1 _1=6 _2
+    4 STU	//  _0=-1 _4
+    8 STI	//  _6
+    1 PUSHINT	//  _6 _7=1
+    CONFIGOPTPARAM	//  _6 _8
+    CTOS	//  _6 _9
+    STSLICER	//  _10
+    ENDC	//  _11
+    CTOS	//  _12
+  }>
+  get_elector_addr PROC:<{
+    // 
+    1 PUSHINT	//  _0=1
+    CONFIGOPTPARAM	//  _1
+    CTOS	//  _2
+    256 PLDI	//  _4
+  }>
+  process_simple_transfer PROC:<{
+    //  s_addr query_id msg_value
+    3 BLKDROP	// 
+  }>
+  process_return_stake PROC:<{
+    //  s_addr query_id reason in_msg
+    3 BLKDROP	//  s_addr
+    c4 PUSH	//  s_addr _11
+    unpack_state INLINECALLDICT	//  s_addr _29 _30 _31 _32 _33 _34 _35
+    s2 POP	//  s_addr initialized pool_address wallet_id stake_at stake balance
+    s0 s6 XCHG	//  balance initialized pool_address wallet_id stake_at stake s_addr
+    REWRITESTDADDR	//  balance initialized pool_address wallet_id stake_at stake src_wc src_addr
+    SWAP	//  balance initialized pool_address wallet_id stake_at stake src_addr src_wc
+    -1 EQINT	//  balance initialized pool_address wallet_id stake_at stake src_addr _18
+    get_elector_addr CALLDICT	//  balance initialized pool_address wallet_id stake_at stake src_addr _18 _19
+    s1 s2 XCHG	//  balance initialized pool_address wallet_id stake_at stake _18 src_addr _19
+    EQUAL	//  balance initialized pool_address wallet_id stake_at stake _18 _20
+    AND	//  balance initialized pool_address wallet_id stake_at stake _21
+    43 THROWIFNOT
+    0 PUSHINT	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0
+    OVER	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0 stake
+    0 EQINT	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0 _25
+    IF:<{	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0
+      s2 POP	//  balance initialized pool_address wallet_id stake_sent=0 stake
+      OVER	//  balance initialized pool_address wallet_id stake_sent=0 stake stake_at=0
+    }>ELSE<{
+      s0 s2 XCHG	//  balance initialized pool_address wallet_id stake_sent=0 stake stake_at
+    }>
+    s5 s6 XCHG
+    s4 s5 XCHG
+    s3 s4 XCHG
+    s3 s3 XCHG2	//  initialized pool_address wallet_id stake_at stake_sent=0 balance stake
+    pack_state INLINECALLDICT	//  _27
+    c4 POP
+  }>
+  process_confirm_stake PROC:<{
+    //  s_addr query_id in_msg
+    2DROP	//  s_addr
+    REWRITESTDADDR	//  src_wc src_addr
+    SWAP	//  src_addr src_wc
+    -1 EQINT	//  src_addr _8
+    get_elector_addr CALLDICT	//  src_addr _8 _9
+    s1 s2 XCHG	//  _8 src_addr _9
+    EQUAL	//  _8 _10
+    AND	//  _11
+    43 THROWIFNOT
+    c4 PUSH	//  _20
+    unpack_state INLINECALLDICT	//  _27 _28 _29 _30 _31 _32 _33
+    DROP	//  initialized pool_address wallet_id stake_at stake balance
+    0 PUSHINT	//  initialized pool_address wallet_id stake_at stake balance stake_sent=0
+    s0 s2 XCHG	//  initialized pool_address wallet_id stake_at stake_sent=0 balance stake
+    pack_state INLINECALLDICT	//  _23
+    c4 POP
+  }>
+  process_recover_stake PROC:<{
+    //  s_addr query_id msg_value in_msg
+    DROP
+    NIP	//  s_addr msg_value
+    SWAP	//  msg_value s_addr
+    REWRITESTDADDR	//  msg_value src_wc src_addr
+    SWAP	//  msg_value src_addr src_wc
+    -1 EQINT	//  msg_value src_addr _9
+    get_elector_addr CALLDICT	//  msg_value src_addr _9 _10
+    s1 s2 XCHG	//  msg_value _9 src_addr _10
+    EQUAL	//  msg_value _9 _11
+    AND	//  msg_value _12
+    43 THROWIFNOT
+    c4 PUSH	//  msg_value _21
+    unpack_state INLINECALLDICT	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake
+    s7 s0 PUSH2	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake msg_value stake
+    GEQ	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake _23
+    IF:<{	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake
+      DROP
+      s2 POP	//  msg_value initialized pool_address wallet_id balance stake_sent
+      0 PUSHINT	//  msg_value initialized pool_address wallet_id balance stake_sent stake_at=0
+      DUP	//  msg_value initialized pool_address wallet_id balance stake_sent stake_at=0 stake=0
+    }>ELSE<{	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake
+      s7 PUSH	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake msg_value
+      SUB	//  msg_value initialized pool_address wallet_id stake_at stake_sent balance stake
+      s1 s3 XCHG	//  msg_value initialized pool_address wallet_id balance stake_sent stake_at stake
+    }>
+    s3 s7 XCHG2	//  stake initialized pool_address wallet_id stake_at stake_sent balance msg_value
+    ADD	//  stake initialized pool_address wallet_id stake_at stake_sent balance
+    6 ROLL	//  initialized pool_address wallet_id stake_at stake_sent balance stake
+    pack_state INLINECALLDICT	//  _28
+    c4 POP
+  }>
+  process_stake PROC:<{
+    //  s_addr query_id grams in_msg
+    s2 POP	//  s_addr in_msg grams
+    c4 PUSH	//  s_addr in_msg grams _11
+    unpack_state INLINECALLDICT	//  s_addr in_msg grams initialized pool_address wallet_id stake_at stake_sent balance stake
+    s0 s9 XCHG	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance s_addr
+    REWRITESTDADDR	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance src_wc src_addr
+    SWAP	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance src_addr src_wc
+    0 EQINT	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance src_addr _18
+    s1 s6 XCPU	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance _18 src_addr pool_address
+    EQUAL	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance _18 _19
+    AND	//  stake in_msg grams initialized pool_address wallet_id stake_at stake_sent balance _20
+    40 THROWIFNOT
+    s0 s7 XCHG	//  stake balance grams initialized pool_address wallet_id stake_at stake_sent in_msg
+    unpack_stake_order INLINECALLDICT	//  stake balance grams initialized pool_address wallet_id stake_at stake_sent validator_pubkey msg_stake_at max_factor adnl_address signature
+    s6 PUSH	//  stake balance grams initialized pool_address wallet_id stake_at stake_sent validator_pubkey msg_stake_at max_factor adnl_address signature stake_at
+    0 EQINT	//  stake balance grams initialized pool_address wallet_id stake_at stake_sent validator_pubkey msg_stake_at max_factor adnl_address signature _30
+    s4 s7 PUXC	//  stake balance grams initialized pool_address wallet_id _30 stake_sent validator_pubkey msg_stake_at max_factor adnl_address signature msg_stake_at stake_at
+    EQUAL	//  stake balance grams initialized pool_address wallet_id _30 stake_sent validator_pubkey msg_stake_at max_factor adnl_address signature _31
+    s1 s7 XCHG	//  stake balance grams initialized pool_address wallet_id signature stake_sent validator_pubkey msg_stake_at max_factor adnl_address _30 _31
+    OR	//  stake balance grams initialized pool_address wallet_id signature stake_sent validator_pubkey msg_stake_at max_factor adnl_address _32
+    41 THROWIFNOT
+    s4 PUSH	//  stake balance grams initialized pool_address wallet_id signature stake_sent validator_pubkey msg_stake_at max_factor adnl_address stake_sent
+    0 EQINT	//  stake balance grams initialized pool_address wallet_id signature stake_sent validator_pubkey msg_stake_at max_factor adnl_address _36
+    42 THROWIFNOT
+    s4 s9 XCPU	//  stake balance grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor stake_sent grams
+    ADD	//  stake balance grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor stake_sent
+    s10 s9 XCPU	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance grams
+    SUB	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance
+    s2 PUSH	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance stake_at
+    get_elector_addr_s CALLDICT	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance stake_at _40
+    1316189259 PUSHINT	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance stake_at _40 _41=1316189259
+    s3 s6 XCHG
+    s5 s4 s7 XCHG3
+    1 PUSHINT
+    s0 s9 XCHG	//  stake stake_sent grams initialized pool_address wallet_id _42=1 _41=1316189259 balance stake_at _40 validator_pubkey msg_stake_at max_factor adnl_address signature
+    pack_stake_order INLINECALLDICT	//  stake stake_sent grams initialized pool_address wallet_id _42=1 _41=1316189259 balance stake_at _40 _43
+    ENDC	//  stake stake_sent grams initialized pool_address wallet_id _42=1 _41=1316189259 balance stake_at _40 _44
+    CTOS	//  stake stake_sent grams initialized pool_address wallet_id _42=1 _41=1316189259 balance stake_at _40 _45
+    s1 s4 XCHG
+    s5 s0 s3 XCHG3
+    s0 s9 XCHG
+    3 PUSHINT	//  stake stake_sent balance initialized pool_address wallet_id stake_at _40 _41=1316189259 _42=1 _45 grams _46=3
+    send_message CALLDICT
+    s3 s6 XCHG
+    3 3 BLKSWAP	//  initialized pool_address wallet_id stake_at stake_sent balance stake
+    pack_state INLINECALLDICT	//  _48
+    c4 POP
+  }>
+  process_recover_stake_request PROC:<{
+    //  s_addr query_id in_msg
+    2DROP	//  s_addr
+    c4 PUSH	//  s_addr _10
+    unpack_state INLINECALLDICT	//  s_addr _28 _29 _30 _31 _32 _33 _34
+    s5 s6 XCHG
+    6 BLKDROP	//  s_addr pool_address
+    SWAP	//  pool_address s_addr
+    REWRITESTDADDR	//  pool_address src_wc src_addr
+    SWAP	//  pool_address src_addr src_wc
+    0 EQINT	//  pool_address src_addr _17
+    s0 s2 XCHG	//  _17 src_addr pool_address
+    EQUAL	//  _17 _18
+    AND	//  _19
+    40 THROWIFNOT
+    get_elector_addr_s CALLDICT	//  _21
+    1197831204 PUSHINT	//  _21 _22=1197831204
+    1 PUSHINT	//  _21 _22=1197831204 _23=1
+    PUSHNULL	//  _21 _22=1197831204 _23=1 _24
+    10000000 PUSHINT	//  _21 _22=1197831204 _23=1 _24 _25=10000000
+    3 PUSHINT	//  _21 _22=1197831204 _23=1 _24 _25=10000000 _26=3
+    send_message CALLDICT
+  }>
+  process_withdraw_request PROC:<{
+    //  s_addr query_id grams in_msg
+    DROP	//  s_addr query_id grams
+    c4 PUSH	//  s_addr query_id grams _11
+    unpack_state INLINECALLDICT	//  s_addr query_id grams _28 _29 _30 _31 _32 _33 _34
+    s5 s6 XCHG
+    6 BLKDROP	//  s_addr query_id grams pool_address
+    s3 PUSH	//  s_addr query_id grams pool_address s_addr
+    REWRITESTDADDR	//  s_addr query_id grams pool_address src_wc src_addr
+    SWAP	//  s_addr query_id grams pool_address src_addr src_wc
+    0 EQINT	//  s_addr query_id grams pool_address src_addr _18
+    s0 s2 XCHG	//  s_addr query_id grams _18 src_addr pool_address
+    EQUAL	//  s_addr query_id grams _18 _19
+    AND	//  s_addr query_id grams _20
+    40 THROWIFNOT
+    s0 s2 XCHG	//  grams query_id s_addr
+    1397641812 PUSHINT	//  grams query_id s_addr _24=1397641812
+    PUSHNULL	//  grams query_id s_addr _24=1397641812 _25
+    s4 s3 s0 XCHG3
+    ROT
+    3 PUSHINT	//  s_addr _24=1397641812 query_id _25 grams _26=3
+    send_message CALLDICT
+  }>
+  process_update_balance_request PROC:<{
+    //  s_addr query_id in_msg
+    DROP	//  s_addr query_id
+    c4 PUSH	//  s_addr query_id _10
+    unpack_state INLINECALLDICT	//  s_addr query_id _37 _38 _39 _40 _41 _42 _43
+    NIP	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake
+    s7 PUSH	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr
+    REWRITESTDADDR	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake src_wc src_addr
+    BALANCE	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake src_wc src_addr own_balance
+    FIRST	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake src_wc src_addr balance
+    s0 s2 XCHG	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake balance src_addr src_wc
+    0 EQINT	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake balance src_addr _20
+    s1 s7 XCPU	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake balance _20 src_addr pool_address
+    EQUAL	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake balance _20 _21
+    AND	//  s_addr query_id initialized pool_address wallet_id stake_at stake_sent stake balance _22
+    40 THROWIFNOT
+    s0 s8 XCHG	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr
+    1279415367 PUSHINT	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367
+    NEWC	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _27
+    s10 PUSH	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _27 balance
+    STGRAMS	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _28
+    s3 PUSH	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _28 stake
+    STGRAMS	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _29
+    ENDC	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _30
+    CTOS	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _31
+    1000000 PUSHINT	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _31 _32=1000000
+    s3 s4 XCHG
+    s2 s3 XCHG
+    s2 s10 XCHG
+    3 PUSHINT	//  balance stake initialized pool_address wallet_id stake_at stake_sent s_addr _26=1279415367 query_id _31 _32=1000000 _33=3
+    send_message CALLDICT
+    2 5 BLKSWAP	//  initialized pool_address wallet_id stake_at stake_sent balance stake
+    pack_state INLINECALLDICT	//  _35
+    c4 POP
+  }>
+  recv_internal PROC:<{
+    //  msg_value in_msg_cell in_msg
+    SWAP	//  msg_value in_msg in_msg_cell
+    CTOS	//  msg_value in_msg cs
+    4 LDU	//  msg_value in_msg flags cs
+    SWAP
+    1 PUSHINT	//  msg_value in_msg cs flags _9=1
+    AND	//  msg_value in_msg cs _10
+    IFJMP:<{	//  msg_value in_msg cs
+      3 BLKDROP	// 
+    }>	//  msg_value in_msg cs
+    LDMSGADDR	//  msg_value in_msg _74 _73
+    DROP	//  msg_value in_msg s_addr
+    OVER	//  msg_value in_msg s_addr in_msg
+    SEMPTY	//  msg_value in_msg s_addr _17
+    IFJMP:<{	//  msg_value in_msg s_addr
+      NIP	//  msg_value s_addr
+      SWAP
+      0 PUSHINT
+      SWAP	//  s_addr _18=0 msg_value
+      process_simple_transfer CALLDICT
+    }>	//  msg_value in_msg s_addr
+    SWAP	//  msg_value s_addr in_msg
+    32 LDU	//  msg_value s_addr op in_msg
+    OVER	//  msg_value s_addr op in_msg op
+    0 EQINT	//  msg_value s_addr op in_msg _25
+    IFJMP:<{	//  msg_value s_addr op in_msg
+      2DROP	//  msg_value s_addr
+      SWAP
+      0 PUSHINT
+      SWAP	//  s_addr _26=0 msg_value
+      process_simple_transfer CALLDICT
+    }>	//  msg_value s_addr op in_msg
+    64 LDU	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    4294967294 PUSHINT	//  msg_value s_addr op query_id in_msg op _32=4294967294
+    EQUAL	//  msg_value s_addr op query_id in_msg _33
+    DROP	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    32 PUSHPOW2DEC	//  msg_value s_addr op query_id in_msg op _34=4294967295
+    EQUAL	//  msg_value s_addr op query_id in_msg _35
+    DROP	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    4184830756 PUSHINT	//  msg_value s_addr op query_id in_msg op _36=4184830756
+    EQUAL	//  msg_value s_addr op query_id in_msg _37
+    IFJMP:<{	//  msg_value s_addr op query_id in_msg
+      s2 POP	//  msg_value s_addr in_msg query_id
+      s0 s3 s3 XCHG3	//  s_addr query_id msg_value in_msg
+      process_recover_stake CALLDICT
+    }>	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    4000269644 PUSHINT	//  msg_value s_addr op query_id in_msg op _39=4000269644
+    EQUAL	//  msg_value s_addr op query_id in_msg _40
+    IFJMP:<{	//  msg_value s_addr op query_id in_msg
+      s2 POP
+      s3 POP	//  query_id s_addr in_msg
+      32 LDU	//  query_id s_addr reason in_msg
+      s2 s3 XCHG	//  s_addr query_id reason in_msg
+      process_return_stake CALLDICT
+    }>	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    4084484172 PUSHINT	//  msg_value s_addr op query_id in_msg op _46=4084484172
+    EQUAL	//  msg_value s_addr op query_id in_msg _47
+    IFJMP:<{	//  msg_value s_addr op query_id in_msg
+      s2 POP
+      s3 POP	//  query_id s_addr in_msg
+      32 LDU	//  query_id s_addr _84 _83
+      NIP	//  query_id s_addr in_msg
+      s1 s2 XCHG	//  s_addr query_id in_msg
+      process_confirm_stake CALLDICT
+    }>	//  msg_value s_addr op query_id in_msg
+    s2 PUSH
+    1316189259 PUSHINT	//  msg_value s_addr op query_id in_msg op _53=1316189259
+    EQUAL	//  msg_value s_addr op query_id in_msg _54
+    IFJMP:<{	//  msg_value s_addr op query_id in_msg
+      s2 POP	//  msg_value s_addr in_msg query_id
+      SWAP	//  msg_value s_addr query_id in_msg
+      LDGRAMS	//  msg_value s_addr query_id _86 _85
+      NIP	//  msg_value s_addr query_id in_msg
+      s1 s3 s0 XCHG3	//  s_addr query_id msg_value in_msg
+      process_stake CALLDICT
+    }>	//  msg_value s_addr op query_id in_msg
+    s4 POP	//  in_msg s_addr op query_id
+    OVER
+    1197831204 PUSHINT	//  in_msg s_addr op query_id op _59=1197831204
+    EQUAL	//  in_msg s_addr op query_id _60
+    IFJMP:<{	//  in_msg s_addr op query_id
+      NIP	//  in_msg s_addr query_id
+      ROT	//  s_addr query_id in_msg
+      process_recover_stake_request CALLDICT
+    }>	//  in_msg s_addr op query_id
+    OVER
+    1380209751 PUSHINT	//  in_msg s_addr op query_id op _62=1380209751
+    EQUAL	//  in_msg s_addr op query_id _63
+    IFJMP:<{	//  in_msg s_addr op query_id
+      NIP	//  in_msg s_addr query_id
+      s0 s2 XCHG	//  query_id s_addr in_msg
+      LDGRAMS	//  query_id s_addr grams in_msg
+      s2 s3 XCHG	//  s_addr query_id grams in_msg
+      process_withdraw_request CALLDICT
+    }>	//  in_msg s_addr op query_id
+    SWAP
+    1111708742 PUSHINT	//  in_msg s_addr query_id op _68=1111708742
+    EQUAL	//  in_msg s_addr query_id _69
+    IFJMP:<{	//  in_msg s_addr query_id
+      ROT	//  s_addr query_id in_msg
+      process_update_balance_request CALLDICT
+    }>	//  in_msg s_addr query_id
+    3 BLKDROP	// 
+  }>
+  try_init PROCREF:<{
+    //  in_msg
+    DROP	// 
+    c4 PUSH	//  _3
+    CTOS	//  ds
+    1 LDU	//  initialized ds
+    SWAP	//  ds initialized
+    0 EQINT	//  ds _11
+    40 THROWIFNOT
+    256 LDU	//  pool_address ds
+    32 LDU	//  pool_address _36 _35
+    DROP	//  pool_address wallet_id
+    BALANCE	//  pool_address wallet_id balance
+    FIRST	//  pool_address wallet_id gram_balance
+    1 PUSHINT	//  pool_address wallet_id gram_balance _25=1
+    0 PUSHINT	//  pool_address wallet_id gram_balance _25=1 _26=0
+    s0 s0 PUSH2	//  pool_address wallet_id gram_balance _25=1 _26=0 _27=0 _28=0
+    s3 s6 XCHG
+    s3 s5 XCHG
+    s3 s4 XCHG
+    s1 s3 s0 XCHG3	//  _25=1 pool_address wallet_id _26=0 _27=0 gram_balance _28=0
+    pack_state INLINECALLDICT	//  _29
+    c4 POP
+  }>
+  recv_external PROC:<{
+    //  in_msg
+    try_init INLINECALLDICT
+  }>
+}END>c

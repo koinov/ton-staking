@@ -522,3 +522,24 @@ add_test(test-db test-db ${TEST_OPTIONS})
 endif()
 #END internal
 
+#BEGIN staking
+add_subdirectory(staking)
+
+add_executable(test-pool test/test-td-main.cpp ${POOL_TEST_SOURCE})
+target_link_libraries(test-pool PRIVATE smc-envelope staking-smc-envelope fift-lib ton_db)
+
+add_executable(test-staking ${STAKING_ONLINE_TEST_SOURCE})
+target_link_libraries(test-staking tdutils tdactor adnllite tl_api ton_crypto ton_block tl_tonlib_api tonlib staking-smc-envelope)
+
+if (NOT CMAKE_CROSSCOMPILING)
+  add_dependencies(test-tonlib-offline gen_staking_fif gen_fif)
+endif()
+
+
+add_test(test-staking test-staking)
+add_test(test-staking-offline test-staking-offline)
+
+#END staking
+
+
+

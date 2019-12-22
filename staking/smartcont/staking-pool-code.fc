@@ -1,0 +1,578 @@
+;; Simple wallet smart contract
+
+(int, cell, cell, cell, cell) unpack_state() inline_ref {
+  var ds = get_data().begin_parse();
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers ) = (ds~load_uint(16), ds~load_dict(), ds~load_dict(), ds~load_dict(), ds~load_dict());
+  ds.end_parse();
+  return (current_period, pool_config, performance, subscriptions, subscribers);
+}
+
+cell pack_state(  int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers ) inline_ref {
+  return begin_cell()
+    .store_uint(current_period, 16)
+    .store_dict(pool_config)
+    .store_dict(performance)
+    .store_dict(subscriptions)
+    .store_dict(subscribers)
+  .end_cell();
+}
+
+(int, int, int, cell) unpack_pool_config(slice cs) inline_ref {
+  (int owner, int owner_fee, int min_amount, cell nominators ) = (cs~load_uint(256), cs~load_uint(32) , cs~load_grams(), cs~load_dict());
+  return (owner, owner_fee, min_amount, nominators);
+}
+
+cell pack_pool_config(owner, owner_fee, min_amount,  nominators) inline_ref {
+  return ( begin_cell()
+        .store_uint(owner, 256)
+        .store_uint(owner_fee, 32)
+        .store_grams(min_amount)
+        .store_dict(nominators)
+      .end_cell()
+  );
+}
+
+
+builder pack_nominator(int status, int balance, int stake) inline_ref {
+  return( begin_cell()
+      .store_uint(status, 8)
+      .store_grams(balance)
+      .store_grams(stake)
+  );
+}
+
+(int, int, int) unpack_nominator(slice cs) inline_ref {
+  (int status, int balance, int stake ) = (cs~load_uint(8), cs~load_grams(), cs~load_grams());
+  return (status, balance, stake);
+}
+
+
+
+
+(int, int, int, int, int  ) unpack_subscription(slice cs) inline_ref {
+  (int subscriber, int grams, int start_period, int end_period, int status) = (cs~load_uint(256), cs~load_grams(), cs~load_uint(16), cs~load_uint(16), cs~load_uint(8));
+  return (subscriber, grams, start_period, end_period, status);
+}
+
+
+builder pack_subscription( int subscriber, int grams, int start_period, int end_period, int status ){
+  return(
+    begin_cell()
+        .store_uint(subscriber, 256)
+        .store_grams(grams)
+        .store_uint(start_period, 16)
+        .store_uint(end_period, 16)
+        .store_uint(status, 8)
+  );
+}
+
+(int, int, int, int, int ) unpack_performance(slice cs) inline_ref {
+  (int rate, int aum, int units, int deposits, int withdrawals) = (cs~load_grams(), cs~load_grams(), cs~load_grams(), cs~load_grams(), cs~load_grams());
+  cs.end_parse();
+  return (rate, aum, units, deposits, withdrawals);
+}
+
+builder pack_performance(int rate, int aum, int units, int deposits, int withdrawals){
+    return(
+      begin_cell()
+          .store_grams(rate)
+          .store_grams(aum)
+          .store_grams(units)
+          .store_grams(deposits)
+          .store_grams(withdrawals)
+    );
+}
+
+int unpack_subscribers_entry (slice cs){
+  int subscription_id = cs~load_uint(32);
+  return subscription_id;
+}
+
+
+builder pack_subscribers_entry (int subscription_id) {
+  return(
+    begin_cell()
+        .store_uint(subscription_id, 32)
+  );
+}
+
+() send_message(addr, op, query_id, body, grams, mode) impure {
+  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+  var msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(addr)
+    .store_grams(grams)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op, 32)
+    .store_uint(query_id, 64);
+  if (body >= 0) {
+    msg~store_uint(body, 32);
+  }
+  send_raw_message(msg.end_cell(), mode);
+}
+
+
+() process_redeem(slice s_addr, int query_id, int subscription_id) impure {
+  var op = 0x4d444552;
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+  var (subscription, found) = subscriptions.udict_get?(32, subscription_id);
+  throw_unless( 41, found);
+  (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
+  throw_unless(42, status == 1 );
+  throw_unless(43, (src_wc == 0) & (src_addr == subscriber) );
+
+  (var current_performance, found) = performance.udict_get?(16, current_period);
+  throw_unless( 45, found);
+  (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( current_performance );
+
+
+  if( start_period == current_period){
+      throw_unless( 57, aum >= grams );
+      send_message(s_addr, op, query_id, 0, grams, 64);
+      deposits -= grams;
+      aum -= grams;
+      grams = 0;
+      status = 0;
+  } else {
+      var (start_performance, found) = performance.udict_get?(16, start_period);
+      throw_unless( 43, found);
+      (var end_performance, found) = performance.udict_get?( 16, current_period - 1 );
+      throw_unless( 44, found);
+      var start_rate = start_performance~load_grams();
+      var end_rate = end_performance~load_grams();
+      withdrawals += grams / start_rate;
+      throw_unless( 57, aum >= grams );
+      aum -= grams;
+      status = 2;
+      end_period = current_period;
+      send_message(s_addr, op, query_id, 0, end_rate * grams / start_rate, 64);
+   }
+
+
+  accept_message();
+
+  subscriptions~udict_set_builder(32, subscription_id, pack_subscription(subscriber, grams, start_period, end_period, status) );
+  performance~udict_set_builder(16, current_period, pack_performance(rate, aum, units, deposits, withdrawals ));
+  set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers) );
+
+  return ();
+}
+
+() process_new_subscription(slice s_addr, int query_id, int msg_value) impure {
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  int last_idx = (1 << 31) + ((1 << 31) - 1);
+  cell subscriber = new_dict();
+  accept_message();
+  var (s_subscriber, found) = subscribers.udict_get?(256, src_addr);
+  int subscription_idx = 0;
+  if( found ){ ;; check if there's a subscription for this address in current period
+    subscriber = s_subscriber~load_dict();
+    var (subscription_period, last_subscription, user_subscription_found) = subscriber.udict_get_prev?(32, last_idx);
+    if( user_subscription_found & ( subscription_period == current_period )  ){
+      var subscription_idx = last_subscription.preload_uint(32);
+      (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( last_subscription );
+      grams += msg_value;
+      subscriptions~udict_set_builder(32, subscription_idx, pack_subscription(subscriber, grams, start_period, end_period, status) );
+      set_data( pack_state(current_period, pool_config, performance, subscribers, subscriptions)  );
+    }
+  }
+  if( subscription_idx == 0 ){
+    var (last_subscription_idx, subscription, s_found ) = subscriptions.udict_get_prev?(32, last_idx);
+    if ( s_found ) {
+        subscription_idx = last_subscription_idx;
+    }
+    subscription_idx += 1;
+    subscriber~udict_set_builder(16, current_period, pack_subscribers_entry(last_subscription_idx) );
+    subscribers~udict_set_builder(256, src_addr, begin_cell().store_dict(subscriber));
+    subscriptions~udict_set_builder(32, subscription_idx, pack_subscription( src_addr, msg_value, current_period, 0, 1) );
+  }
+  var (performance_s, f) = performance.udict_get?(16, current_period);
+  (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
+  performance~udict_set_builder(16, current_period, pack_performance(rate, aum + msg_value, units, deposits + msg_value, withdrawals));
+
+  set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
+  return();
+}
+
+() process_new_period(slice s_addr, int query_id, int msg_value) impure {
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+  var (performance_s, found) = performance.udict_get?(16, current_period);
+  throw_unless( 43, found);
+  var (_, performance_prev_s, found) = performance.udict_get_prev?(16, current_period);
+  throw_unless( 44, found);
+
+  (int owner, int owner_fee, int min_amount, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+  throw_unless( 50, ((src_wc == 0) & (src_addr == owner )) ); ;; owner only
+
+  accept_message();
+
+  int last_idx = (1 << 31) + ((1 << 31) - 1);
+
+  (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
+  int prev_rate = performance_prev_s~load_grams();
+  int prev_aum = performance_prev_s~load_grams();
+
+  int owners_share = 0;
+  int owners_units = 0;
+
+  int managed_aum = aum - deposits;
+  int managed_units = units - withdrawals;
+
+  int new_rate = managed_aum / managed_units;
+  int new_units = aum / new_rate;
+
+  if( (managed_units * new_rate) > (managed_units * prev_rate) )
+  {
+      owners_share = (((managed_units * new_rate) - (managed_units * prev_rate)) * owner_fee ) / 10000; ;; calculate incentive fee
+      owners_units = owners_share / new_rate;
+      ;; new_units += owners_units;
+
+      var (s_subscriber, found) = subscribers.udict_get?(256, src_addr); ;; find owner's subscriptions
+      var subscriber = s_subscriber~load_dict();
+      var (subscription_idx, subscription, s_found ) = subscriptions.udict_get_prev?(32, last_idx); ;; get last subscription index
+
+      subscriber~udict_set_builder(16, current_period + 1, pack_subscribers_entry(subscription_idx)); ;; create subscription for the owner in new period
+      subscriptions~udict_set_builder(32, subscription_idx + 1, pack_subscription(owner, owners_share, current_period, 0, 1) ); ;; add new owner's subscription
+
+
+  }
+
+
+
+  performance~udict_set_builder(16, current_period,  pack_performance(new_rate, aum, units, deposits, withdrawals  )); ;; update performance in closing period
+  current_period += 1;
+  performance~udict_set_builder(16, current_period,  pack_performance(0, aum, new_units, 0, 0 ) ) ;  ;; create new performance period
+  set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
+  return ();
+}
+
+() process_activate_wallet(slice s_addr, int query_id, int wallet_id, int new_status) impure {
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
+
+  (int owner, int owner_fee, int min_amount, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  throw_unless( 50, ((src_wc == 0) & (src_addr == owner )) ); ;; owner only
+  var (nominator_s, found)  = nominators.udict_get?(256, wallet_id);
+  throw_unless(51, found);
+  var (status, balance, stake) = unpack_nominator( nominator_s );
+  throw_if(52, status == new_status);
+  accept_message();
+  nominators~udict_set_builder(256, wallet_id, pack_nominator(new_status, balance, stake));
+  pool_config = pack_pool_config(owner, owner_fee, min_amount, nominators);
+  set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
+  return ();
+}
+
+slice get_nominator_address(int address){
+  return (
+    begin_cell().store_uint(6, 4).store_int(-1, 8).store_uint(address, 256).end_cell().begin_parse()
+  );
+}
+
+() process_fetch_balances(slice s_addr, int query_id ) impure {
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
+
+  (int owner, int owner_fee, int min_amount, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  throw_unless( 50, ((src_wc == 0) & (src_addr == owner )) ); ;; owner only
+
+  int address_idx = 0;
+  int found = 0;
+
+  var balance = get_balance();
+
+  do {
+    (address_idx, var nominator, found) = nominators.udict_get_next?(256, address_idx);
+    if( found ){
+      var (status, balance, stake) = unpack_nominator(nominator);
+      if( status == 1){
+        send_message( get_nominator_address(address_idx), 0x42435446, 1, 0, 1000000, 64 ); ;; BCFT
+      }
+    }
+  } until( ~ found );
+
+  var (performance_s, found) = performance.udict_get?(16, current_period);
+  (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
+
+
+  performance~udict_set_builder(16, current_period,  pack_performance(rate, balance~first(), units, deposits, withdrawals  ) ); ;; update performance in closing period
+  set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
+}
+
+() process_got_balance(slice s_addr, int query_id, int balance, int stake ) impure {
+  (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
+
+  (int owner, int owner_fee, int min_amount, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+  var (src_wc, src_addr) = parse_std_addr(s_addr);
+  var ( nominator,  f) = nominators.udict_get?(256, src_addr);
+  throw_unless(55,  ( src_wc == -1 ) & f  );
+  var (status, _, _) = unpack_nominator(nominator);
+  nominators~udict_set_builder(256, src_addr, pack_nominator(status, balance, stake) );
+  pool_config = pack_pool_config(owner, owner_fee, min_amount, nominators);
+
+  var (performance_s, found) = performance.udict_get?(16, current_period);
+  (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
+
+  performance~udict_set_builder(16, current_period,  pack_performance(rate, aum + balance + stake, units, deposits, withdrawals  )); ;; update poerformance in closing period
+
+  set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
+}
+
+int decode_text(slice in_msg){
+    var cur_char = in_msg~load_uint(8);
+    throw_unless(56, cur_char != 52); ;; not a redemption request
+    int res = 0;
+    while( ~ in_msg.slice_empty?() ) {
+        cur_char = in_msg~load_uint(8);
+        throw_unless(57, (cur_char >= 0x30) & (cur_char <= 0x39) );
+        res = (res * 10) + cur_char - 0x30;
+    }
+    return res;
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+    var cs = in_msg_cell.begin_parse();
+    var flags = cs~load_uint(4);
+    if( flags & 1 ){ ;; ignore bounced messages
+      return();
+    }
+    var s_addr = cs~load_msg_addr();
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+    if( in_msg.slice_empty?() ) {
+        return process_new_subscription(s_addr, 0, msg_value);
+    }
+    int op = in_msg~load_uint(32);
+    if( op == 0 ){
+          if( in_msg.slice_empty?() )
+          {
+            return process_new_subscription(s_addr, 0, msg_value);
+          } else {
+            int subscription_id = decode_text(in_msg);
+            return process_redeem(s_addr, 0, subscription_id);
+          }
+    }
+    int query_id = in_msg~load_uint(64);
+    if (op == 0x534D4452) { ;; RDMS Redeem
+        int subscription_id = in_msg~load_uint(32);
+        return process_redeem(s_addr, query_id, subscription_id);
+    }
+    if( op == 0x544c5741 ) { ;; AWLT Activate wallet
+        int wallet_address = in_msg~load_uint(256);
+        int wallet_status = in_msg~load_uint(8);
+        return process_activate_wallet(s_addr, query_id, wallet_address, wallet_status);
+    }
+    if( op == 0x42445055 ) { ;; UPDB Fetch balances
+        int wallet_address = in_msg~load_uint(256);
+        int wallet_id = in_msg~load_uint(8);
+        return process_fetch_balances(s_addr, query_id);
+    }
+    if( op == 0x4c425447 ) { ;; GTBL got balances
+        int balance = in_msg~load_grams();
+        int stake = in_msg~load_grams();
+        return process_got_balance(s_addr, query_id, balance, stake);
+    }
+    if( op == 0x5057454e ) { ;; NEWP new period
+        return process_new_period(s_addr, query_id, msg_value);
+    }
+
+}
+
+
+() try_init(slice in_msg) impure inline_ref {
+  ;; first external query is accepted to setup initial phase
+  var cs = in_msg;
+  var ds = begin_parse(get_data());
+  (int current_period, cell pool_config) = (ds~load_uint(16), ds~load_ref());
+  ds.end_parse();
+  throw_unless(30, current_period == 0 );
+
+  throw_if(37, current_period);
+  accept_message();
+  cs~touch();
+
+  (int owner, int owner_fee, int min_amount, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+  var nominators = cs~load_ref();
+  pool_config = pack_pool_config(owner, owner_fee, min_amount, nominators);
+
+  var performance = new_dict();
+  var balance = get_balance();
+  var gram_balance = balance.first();
+  ;; Initialize performance, set unit rate 10000 grams for the unit
+  performance~udict_set_builder(16, current_period, pack_performance(10000, gram_balance, gram_balance / 10000, 0, 0) );
+  var subscriptions = new_dict();
+  var subscribers = new_dict();
+  var subscriber = new_dict();
+
+
+  subscriber~udict_set_builder(16, current_period, pack_subscribers_entry(1)); ;; store new non-withdrawable subsciption index for the owner
+  subscribers~udict_set_builder(256, owner, begin_cell().store_dict(subscriber) ); ;; create subscriber entry for the owner
+  subscriptions~udict_set_builder(32, 1, pack_subscription(owner, gram_balance, current_period, 0, 1) ); ;; store new subscription
+
+  current_period += 1; ;; create new period for incoming subscriptions
+  performance~udict_set_builder(16, current_period, pack_performance(0, gram_balance, gram_balance / 10000, 0, 0) ); ;; Initialize performance
+  set_data(pack_state(current_period, pool_config, performance, subscriptions, subscribers ));
+}
+
+
+() recv_external(slice in_msg) impure {
+  ;; empty message triggers init
+  return try_init(in_msg);
+}
+
+
+int get_owner() method_id {
+  (_, cell pool_config, _, _, _) = unpack_state();
+  (int owner, _, _, _) = unpack_pool_config(pool_config.begin_parse());
+
+  return owner;
+}
+
+int get_current_period() method_id {
+  (int current_period, _, _, _, _) = unpack_state();
+  return current_period;
+}
+
+cell get_nominators() method_id {
+  (_, cell pool_config, _, _, _) = unpack_state();
+  (_, _, _, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+  return nominators;
+}
+
+int get_subscriptions_count() method_id {
+  (_, _, _ , var subscriptions, _ ) = unpack_state();
+  int last_idx = (1 << 31) + ((1 << 31) - 1);
+  var (subscription_idx, subscription, s_found ) = subscriptions.udict_get_prev?(32, last_idx); ;; get last subscription index
+  if( s_found ){
+    return subscription_idx;
+  }
+  return 0;
+}
+
+(int, int, int, int, int, int) get_subscription(int subscription_id, int direction) method_id {
+  (_, _, _ , var subscriptions, _ ) = unpack_state();
+  int s_found = 0;
+  slice subscription = null();
+  if( direction == 0 ){
+      (subscription, s_found ) = subscriptions.udict_get?(32, subscription_id); ;; get subscription by index
+  }
+  if( direction == 1 ){
+      (subscription_id, subscription, s_found ) = subscriptions.udict_get_next?(32, subscription_id); ;; get next subscription from index
+  }
+  if( direction == -1 ){
+      (subscription_id, subscription, s_found ) = subscriptions.udict_get_prev?(32, subscription_id); ;; get previous subscription from index
+  }
+
+  if( s_found ){
+      (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
+      return( subscription_id, subscriber, grams, start_period, end_period, status);
+  }
+  return ( 0,0,0,0,0,0);
+}
+
+
+(int, int, int, int ) get_nominator(int nominator_address, int direction) method_id {
+  (_, var pool_config, _ , _ , _ ) = unpack_state();
+  int s_found = 0;
+  slice nominator = null();
+   (_, _, _, cell nominators) = unpack_pool_config(pool_config.begin_parse());
+
+  if( direction == 0 ){
+      (nominator, s_found ) = nominators.udict_get?(256, nominator_address); ;; get subscription by index
+  }
+  if( direction == 1 ){
+      (nominator_address, nominator, s_found ) = nominators.udict_get_next?(256, nominator_address); ;; get next subscription from index
+  }
+  if( direction == -1 ){
+      (nominator_address, nominator, s_found ) = nominators.udict_get_prev?(256, nominator_address); ;; get previous subscription from index
+  }
+
+  if( s_found ){
+      (int status, int balance, int stake) = unpack_nominator( nominator );
+      return( nominator_address, status, balance, stake);
+  }
+  return (0,0,0,0 );
+}
+
+(int, int, int, int, int, int ) get_performance(int period, int direction) method_id {
+  (_, _, var performance , _ , _ ) = unpack_state();
+  int s_found = 0;
+  slice performance_s = null();
+
+  if( direction == 0 ){
+      (performance_s, s_found ) = performance.udict_get?(16, period); ;; get performance in period
+  }
+  if( direction == 1 ){
+      (period, performance_s, s_found ) = performance.udict_get_next?(16, period); ;; get next performance from period
+  }
+  if( direction == -1 ){
+      (period, performance_s, s_found ) = performance.udict_get_prev?(16, period); ;; get previous performance from period
+  }
+
+  if( s_found ){
+      (int aum, int units, int rate, int deposits, int withdrawals ) = unpack_performance(performance_s);
+      return( period, aum, units, rate, deposits, withdrawals);
+  }
+  return (0, 0, 0, 0, 0, 0 );
+}
+
+(int, int) get_subscribers_subscription(int subscriber_address, int period, int direction) method_id {
+  (_, _, _ , _ , var subscribers ) = unpack_state();
+  int s_found = 0;
+  slice subscriber_entry_s = null();
+
+  var (subscriber_s, s_found) = subscribers.udict_get?(256, subscriber_address);
+  if( ~ s_found ){
+    return (0, 0);
+  }
+
+  var subscriber = subscriber_s.preload_dict();
+
+  if( direction == 0 ){
+      (subscriber_entry_s, s_found ) = subscriber.udict_get?(16, period); ;; get subscription entry in period
+  }
+  if( direction == 1 ){
+      (period, subscriber_entry_s, s_found ) = subscriber.udict_get_next?(16, period); ;; get next subscription entry
+  }
+  if( direction == -1 ){
+      (period, subscriber_entry_s, s_found ) = subscriber.udict_get_prev?(16, period); ;; get previous subscription entry
+  }
+
+  if( s_found ){
+      int subscription_id = unpack_subscribers_entry(subscriber_entry_s);
+      return( period, subscription_id );
+  }
+
+  return (0, 0 );
+}
+
+_ get_subscribers_subscriptions(int subscriber_address) method_id {
+  (_, _, _ , _ , var subscribers ) = unpack_state();
+  int s_found = 0;
+  slice subscriber_entry_s = null();
+  var res = nil;
+  var period = 0;
+
+  var (subscriber_s, s_found) = subscribers.udict_get?(256, subscriber_address);
+
+  if( ~ s_found ){
+    return res;
+  }
+
+  var subscriber = subscriber_s.preload_dict();
+
+
+  do {
+        (period, var subscriber_entry_s, s_found) = subscriber.udict_get_next?(16, period);
+        if( s_found ){
+            var subscription_id = unpack_subscribers_entry(subscriber_entry_s);
+            res = cons( pair(period, subscription_id), res );
+        }
+
+  } until( ~ s_found );
+  return res;
+}

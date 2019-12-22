@@ -1,0 +1,285 @@
+cell pack_state(  int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) inline_ref {
+  return begin_cell()
+    .store_uint(initialized, 1)
+    .store_uint(pool_address, 256)
+    .store_uint(wallet_id, 32)
+    .store_uint(stake_at, 32)
+    .store_grams(stake_sent)
+    .store_grams(balance)
+    .store_grams(stake)
+  .end_cell();
+}
+
+
+(int, int, int, int, int, int, int ) unpack_state(cell ds) inline_ref {
+  var ds = get_data().begin_parse();
+  (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) =
+        (ds~load_uint(1), ds~load_uint(256), ds~load_uint(32), ds~load_uint(32),  ds~load_grams(), ds~load_grams(), ds~load_grams());
+  ds.end_parse();
+  return ( initialized, pool_address, wallet_id, stake_at, stake_sent, balance, stake );
+}
+
+(int, int, int, int, slice) unpack_stake_order(slice cs) inline_ref {
+    int validator_pubkey = cs~load_uint(256);
+    int stake_at = cs~load_uint(32);
+    int max_factor = cs~load_uint(32);
+    int adnl_address = cs~load_uint(256);
+    slice signature = cs~load_ref().begin_parse().preload_bits(512);
+    return( validator_pubkey, stake_at, max_factor, adnl_address, signature);
+}
+
+builder pack_stake_order(int validator_pubkey, int stake_at, int max_factor, int adnl_address, slice signature) inline_ref {
+    return(
+        begin_cell()
+            .store_uint(validator_pubkey, 256)
+            .store_uint(stake_at, 32)
+            .store_uint(max_factor, 32)
+            .store_uint(adnl_address, 256)
+            .store_ref( begin_cell().store_slice(signature).end_cell() )
+    );
+}
+
+
+() send_message(addr, op, query_id, slice body, grams, mode) impure {
+  ;; int_msg_info$0 ihr_disabled:Bool bounce:Bool bounced:Bool src:MsgAddress -> 011000
+  var msg = begin_cell()
+    .store_uint(0x18, 6)
+    .store_slice(addr)
+    .store_grams(grams)
+    .store_uint(0, 1 + 4 + 4 + 64 + 32 + 1 + 1)
+    .store_uint(op, 32)
+    .store_uint(query_id, 64)
+    .store_slice(body);
+
+  send_raw_message(msg.end_cell(), mode);
+}
+
+slice get_elector_addr_s() {
+    return begin_cell().store_uint(6, 4).store_int(-1, 8).store_slice(config_param(1).begin_parse()).end_cell().begin_parse();
+}
+
+int get_elector_addr() {
+    return config_param(1).begin_parse().preload_int(256);
+}
+
+
+() process_simple_transfer(slice s_addr, int query_id, int msg_value) impure {
+
+}
+
+
+
+
+
+
+() process_return_stake(slice s_addr, int query_id, int reason, slice in_msg) impure {
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
+
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+    throw_unless(43, ((src_wc == -1) & (src_addr == get_elector_addr())) ); ;; must be from election contract
+
+
+    stake_sent = 0;
+    if( stake == 0 ){
+        stake_at = 0;
+    }
+
+    set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent, balance, stake) );
+}
+
+() process_confirm_stake(slice s_addr, int query_id, slice in_msg) impure {
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+    throw_unless(43, ((src_wc == -1) & (src_addr == get_elector_addr())) ); ;; must be from election contract
+
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent,  int balance, int stake) = unpack_state( get_data());
+
+
+    stake = stake_sent;
+    stake_sent = 0;
+    set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent,  balance, stake) );
+}
+
+() process_recover_stake(slice s_addr, int query_id, int msg_value, slice in_msg) impure {
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+    throw_unless(43, ((src_wc == -1) & (src_addr == get_elector_addr())) ); ;; must be from election contract
+
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
+
+
+    if( msg_value >= stake ){
+        stake_at = 0;
+        stake = 0;
+    } else {
+        stake -= msg_value;
+    }
+    balance += msg_value;
+
+
+    set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent,  balance, stake) );
+}
+
+
+() process_stake(slice s_addr, int query_id, int grams, slice in_msg ) impure {
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+    throw_unless(40, ((src_wc == 0) & (src_addr == pool_address)) );
+
+    (int validator_pubkey, int msg_stake_at, int max_factor, int adnl_address, slice signature) = unpack_stake_order(in_msg);
+
+
+    throw_unless(41, ( stake_at == 0 ) | (msg_stake_at == stake_at)  );
+    throw_unless(42, stake_sent == 0 );
+
+    stake_sent += grams;
+    balance -= grams;
+    stake_at = msg_stake_at;
+
+    ;; send stake message
+    send_message( get_elector_addr_s(), 0x4e73744b, 1, pack_stake_order(validator_pubkey, msg_stake_at, max_factor, adnl_address, signature).end_cell().begin_parse(), grams, 3 );
+
+    set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent,  balance, stake) );
+}
+
+() process_recover_stake_request(slice s_addr, int query_id, slice in_msg ) impure {
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+    throw_unless(40, ((src_wc == 0) & (src_addr == pool_address)) ); ;; pool address only
+
+    ;; send recover stake message
+    send_message( get_elector_addr_s(), 0x47657424, 1, null(), 10000000, 3 );
+
+}
+
+() process_withdraw_request(slice s_addr, int query_id, int grams, slice in_msg ) impure {
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+    throw_unless(40, ((src_wc == 0) & (src_addr == pool_address)) ); ;; pool address only
+    s_addr~touch();
+    send_message( s_addr, 0x534e5254, query_id, null(), grams, 3 ); ;; TRNS
+}
+
+() process_update_balance_request(slice s_addr, int query_id, slice in_msg ) impure {
+    (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+    var own_balance = get_balance();
+    balance = own_balance.first();
+
+    throw_unless(40, ((src_wc == 0) & (src_addr == pool_address)) ); ;; pool address only
+    s_addr~touch();
+    send_message( s_addr, 0x4c425447, query_id, begin_cell().store_grams(balance).store_grams(stake).end_cell().begin_parse(), 1000000, 3 ); ;; GTBL - send balances to pool contract
+
+    set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent, balance, stake) );
+}
+
+() recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
+    var cs = in_msg_cell.begin_parse();
+    var flags = cs~load_uint(4);
+    if( flags & 1 ){ ;; ignore bounced messages
+      return();
+    }
+    var s_addr = cs~load_msg_addr();
+    var (src_wc, src_addr) = parse_std_addr(s_addr);
+    if( in_msg.slice_empty?() ) {
+        return process_simple_transfer(s_addr, 0, msg_value);
+    }
+
+    int op = in_msg~load_uint(32);
+    if( op == 0 ){
+          return process_simple_transfer(s_addr, 0, msg_value);
+    }
+    int query_id = in_msg~load_uint(64);
+
+    if( op == 0xfffffffe){
+        ;; stake not returned
+    }
+
+    if( op == 0xffffffff){
+        ;; incorrect query
+    }
+
+
+    if( op == 0xf96f7324){
+        return process_recover_stake(s_addr, query_id, msg_value, in_msg);
+        ;; process recover stake
+    }
+
+    if( op == 0xee6f454c){
+        var reason = in_msg~load_uint(32);
+        ;; 0 - no elections active or source in master chain
+        ;; 1 - incorrect signature
+        ;; 2 - stake smaller than 1/4096 of the total accumulated stakes
+        ;; 3 - stake for some other elections
+        ;; 4 - can make stakes for a public key from one address only
+        ;; 5 - stake too small
+        ;; 6 - invalid max factor
+
+        ;; process return stake
+        return process_return_stake(s_addr, query_id, reason, in_msg);
+    }
+
+    if( op == 0xf374484c){
+        var comment = in_msg~load_uint(32);
+        ;; 0 - ok
+
+        ;; process confirmation
+        return process_confirm_stake(s_addr, query_id, in_msg);
+    }
+
+    if( op == 0x4e73744b){ ;; NstK
+        var grams = in_msg~load_grams();
+        ;; process new stake request
+        return process_stake(s_addr, query_id, msg_value, in_msg);
+    }
+
+    if( op == 0x47657424){ ;; Get$
+        ;; recover stake request
+        return process_recover_stake_request(s_addr, query_id, in_msg);
+    }
+
+    if( op == 0x52445457){ ;; WTDR
+        ;; withdraw request
+        var grams = in_msg~load_grams();
+        return process_withdraw_request(s_addr, query_id, grams, in_msg);
+    }
+
+    if( op == 0x42435446){ ;; FTCB
+        return process_update_balance_request(s_addr, query_id, in_msg);
+    }
+
+
+
+}
+
+
+
+
+
+
+
+() try_init(slice in_msg) impure inline_ref {
+  ;; first external query is accepted to setup initial phase
+  var cs = in_msg;
+  var ds = begin_parse(get_data());
+  var initialized = ds~load_uint(1);
+  throw_unless( 40, initialized == 0);
+  var pool_address = ds~load_uint(256);
+  var wallet_id = ds~load_uint(32);
+  var balance = get_balance();
+  var gram_balance = balance.first();
+  set_data( pack_state(1, pool_address, wallet_id, 0, 0 ,gram_balance, 0 ) );
+}
+
+() recv_external(slice in_msg) impure {
+  ;; empty message triggers init
+  return try_init(in_msg);
+}
+
+
+
+
+
+
