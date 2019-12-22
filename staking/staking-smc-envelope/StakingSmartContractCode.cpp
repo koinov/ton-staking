@@ -32,7 +32,6 @@ const auto& get_map() {
       map[name] = vm::std_boc_deserialize(td::base64_decode(code_str).move_as_ok()).move_as_ok();
     };
 #include "smartcont/auto/staking-pool-code.cpp"
-#include "smartcont/auto/elector-code.cpp"
 #include "smartcont/auto/nominator-code.cpp"
     return map;
   }();
@@ -49,10 +48,6 @@ td::Result<td::Ref<vm::Cell>> StakingSmartContractCode::load(td::Slice name) {
   return it->second;
 }
 
-td::Ref<vm::Cell> StakingSmartContractCode::elector() {
-  static auto res = load("elector").move_as_ok();
-  return res;
-}
 
 td::Ref<vm::Cell> StakingSmartContractCode::staking_pool() {
   static auto res = load("staking-pool").move_as_ok();
