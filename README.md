@@ -219,6 +219,7 @@ Please excuse rather raw level of solution, but it was physically impossible for
 - [ ] Changing owner's fee within predefined limits
 - [ ] Changing minimum subscription amount
 - [ ] Changing owner ceremony
+- [ ] Penalty for fast redemption
 - [ ] Handling redemption requests when pool smart contract doesn't have enough funds (nominators should return funds to pool in this case)
 - [ ] Add operator role, so stakes can be handled by third party
 - [ ] Support Multisig in console (to use multisig wallet as an owner wallet for better convenience)

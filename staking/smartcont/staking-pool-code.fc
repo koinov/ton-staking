@@ -9,11 +9,11 @@
 
 cell pack_state(  int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers ) inline_ref {
   return begin_cell()
-    .store_uint(current_period, 16)
-    .store_dict(pool_config)
-    .store_dict(performance)
-    .store_dict(subscriptions)
-    .store_dict(subscribers)
+    .store_uint(current_period, 16) ;; current period
+    .store_dict(pool_config) ;; configuration cell
+    .store_dict(performance) ;; perfirmance dict
+    .store_dict(subscriptions) ;; subscriptions dict
+    .store_dict(subscribers) ;; subscribers dict
   .end_cell();
 }
 
@@ -24,10 +24,10 @@ cell pack_state(  int current_period, cell pool_config, cell performance, cell s
 
 cell pack_pool_config(owner, owner_fee, min_amount,  nominators) inline_ref {
   return ( begin_cell()
-        .store_uint(owner, 256)
-        .store_uint(owner_fee, 32)
-        .store_grams(min_amount)
-        .store_dict(nominators)
+        .store_uint(owner, 256) ;; owner address, 0 WC
+        .store_uint(owner_fee, 32) ;; encentive fee in percents / 100. 500 means 5%
+        .store_grams(min_amount) ;; minimal subscription value
+        .store_dict(nominators) ;; nominators dict
       .end_cell()
   );
 }
@@ -35,11 +35,12 @@ cell pack_pool_config(owner, owner_fee, min_amount,  nominators) inline_ref {
 
 builder pack_nominator(int status, int balance, int stake) inline_ref {
   return( begin_cell()
-      .store_uint(status, 8)
-      .store_grams(balance)
-      .store_grams(stake)
+      .store_uint(status, 8) ;; status
+      .store_grams(balance) ;; balance
+      .store_grams(stake) ;; at stake
   );
 }
+
 
 (int, int, int) unpack_nominator(slice cs) inline_ref {
   (int status, int balance, int stake ) = (cs~load_uint(8), cs~load_grams(), cs~load_grams());
@@ -58,11 +59,11 @@ builder pack_nominator(int status, int balance, int stake) inline_ref {
 builder pack_subscription( int subscriber, int grams, int start_period, int end_period, int status ){
   return(
     begin_cell()
-        .store_uint(subscriber, 256)
-        .store_grams(grams)
-        .store_uint(start_period, 16)
-        .store_uint(end_period, 16)
-        .store_uint(status, 8)
+        .store_uint(subscriber, 256) ;; subscriber wallet address, 0 WC
+        .store_grams(grams) ;; amount of grams
+        .store_uint(start_period, 16) ;; start period
+        .store_uint(end_period, 16) ;; end period
+        .store_uint(status, 8) ;; status 
   );
 }
 
@@ -75,11 +76,11 @@ builder pack_subscription( int subscriber, int grams, int start_period, int end_
 builder pack_performance(int rate, int aum, int units, int deposits, int withdrawals){
     return(
       begin_cell()
-          .store_grams(rate)
-          .store_grams(aum)
-          .store_grams(units)
-          .store_grams(deposits)
-          .store_grams(withdrawals)
+          .store_grams(rate) ;; unit rate
+          .store_grams(aum) ;; grams under management 
+          .store_grams(units) ;; units issued
+          .store_grams(deposits) ;; deposits in grams
+          .store_grams(withdrawals) ;; withdrawals in units 
     );
 }
 
@@ -92,7 +93,7 @@ int unpack_subscribers_entry (slice cs){
 builder pack_subscribers_entry (int subscription_id) {
   return(
     begin_cell()
-        .store_uint(subscription_id, 32)
+        .store_uint(subscription_id, 32) ;; subscription id
   );
 }
 
@@ -111,47 +112,47 @@ builder pack_subscribers_entry (int subscription_id) {
   send_raw_message(msg.end_cell(), mode);
 }
 
-
+;; redemption process
 () process_redeem(slice s_addr, int query_id, int subscription_id) impure {
   var op = 0x4d444552;
   (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
   var (src_wc, src_addr) = parse_std_addr(s_addr);
 
   var (subscription, found) = subscriptions.udict_get?(32, subscription_id);
-  throw_unless( 41, found);
+  throw_unless( 41, found); ;; no subscription found
   (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
-  throw_unless(42, status == 1 );
-  throw_unless(43, (src_wc == 0) & (src_addr == subscriber) );
+  throw_unless(42, status == 1 ); ;; not an active suscription
+  throw_unless(43, (src_wc == 0) & (src_addr == subscriber) ); ;; subscription doesn't belong to sender
 
-  (var current_performance, found) = performance.udict_get?(16, current_period);
+  (var current_performance, found) = performance.udict_get?(16, current_period); ;; unpack current period
   throw_unless( 45, found);
   (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( current_performance );
 
 
-  if( start_period == current_period){
+  if( start_period == current_period){ ;; redeem in current period
       throw_unless( 57, aum >= grams );
       send_message(s_addr, op, query_id, 0, grams, 64);
-      deposits -= grams;
-      aum -= grams;
-      grams = 0;
-      status = 0;
-  } else {
+      deposits -= grams; ;; subtract grams from current deposits
+      aum -= grams; ;; subtract withdrawal from AUM
+      grams = 0; ;; reset subscription amount
+      status = 0; ;; allow new subscriptions in current period   
+  } else { ;; redeem subscriptions with the reward
       var (start_performance, found) = performance.udict_get?(16, start_period);
       throw_unless( 43, found);
       (var end_performance, found) = performance.udict_get?( 16, current_period - 1 );
       throw_unless( 44, found);
-      var start_rate = start_performance~load_grams();
-      var end_rate = end_performance~load_grams();
-      withdrawals += grams / start_rate;
-      throw_unless( 57, aum >= grams );
-      aum -= grams;
-      status = 2;
-      end_period = current_period;
-      send_message(s_addr, op, query_id, 0, end_rate * grams / start_rate, 64);
+      var start_rate = start_performance~load_grams(); ;; get subscription initial rate
+      var end_rate = end_performance~load_grams(); ;; get subscription final rate
+      withdrawals += grams / start_rate; ;; calculate number of units and add to current period withdrawals
+      throw_unless( 57, aum >= grams ); ;; throw if it exceeds current AUM, maybe beter to check the balance
+      aum -= end_rate * grams / start_rate; ;; subtract redemption from current AUM
+      status = 2; ;; set subscription status to redeemed
+      end_period = current_period; ;; set end period 
+      send_message(s_addr, op, query_id, 0, end_rate * grams / start_rate, 64); ;; transfer grams
    }
 
 
-  accept_message();
+  accept_message(); 
 
   subscriptions~udict_set_builder(32, subscription_id, pack_subscription(subscriber, grams, start_period, end_period, status) );
   performance~udict_set_builder(16, current_period, pack_performance(rate, aum, units, deposits, withdrawals ));
@@ -169,29 +170,28 @@ builder pack_subscribers_entry (int subscription_id) {
   var (s_subscriber, found) = subscribers.udict_get?(256, src_addr);
   int subscription_idx = 0;
   if( found ){ ;; check if there's a subscription for this address in current period
-    subscriber = s_subscriber~load_dict();
+    subscriber = s_subscriber~load_dict(); ;; load subscriptions of the sender
     var (subscription_period, last_subscription, user_subscription_found) = subscriber.udict_get_prev?(32, last_idx);
-    if( user_subscription_found & ( subscription_period == current_period )  ){
+    if( user_subscription_found & ( subscription_period == current_period )  ){ ;; subscription is the current one, add grams 
       var subscription_idx = last_subscription.preload_uint(32);
       (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( last_subscription );
-      grams += msg_value;
-      subscriptions~udict_set_builder(32, subscription_idx, pack_subscription(subscriber, grams, start_period, end_period, status) );
-      set_data( pack_state(current_period, pool_config, performance, subscribers, subscriptions)  );
+      grams += msg_value; ;; add grams 
+      subscriptions~udict_set_builder(32, subscription_idx, pack_subscription(subscriber, grams, start_period, end_period, status) ); ;; change subscription entry only 
     }
   }
-  if( subscription_idx == 0 ){
+  if( subscription_idx == 0 ){ ;; new subscription required
     var (last_subscription_idx, subscription, s_found ) = subscriptions.udict_get_prev?(32, last_idx);
     if ( s_found ) {
         subscription_idx = last_subscription_idx;
     }
     subscription_idx += 1;
-    subscriber~udict_set_builder(16, current_period, pack_subscribers_entry(last_subscription_idx) );
-    subscribers~udict_set_builder(256, src_addr, begin_cell().store_dict(subscriber));
-    subscriptions~udict_set_builder(32, subscription_idx, pack_subscription( src_addr, msg_value, current_period, 0, 1) );
+    subscriber~udict_set_builder(16, current_period, pack_subscribers_entry(last_subscription_idx) ); ;; create new subscription for subscriber
+    subscribers~udict_set_builder(256, src_addr, begin_cell().store_dict(subscriber)); ;; save subscribers data 
+    subscriptions~udict_set_builder(32, subscription_idx, pack_subscription( src_addr, msg_value, current_period, 0, 1) ); ;; create new subscription 
   }
   var (performance_s, f) = performance.udict_get?(16, current_period);
   (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
-  performance~udict_set_builder(16, current_period, pack_performance(rate, aum + msg_value, units, deposits + msg_value, withdrawals));
+  performance~udict_set_builder(16, current_period, pack_performance(rate, aum + msg_value, units, deposits + msg_value, withdrawals)); ;; update current period
 
   set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
   return();
@@ -214,23 +214,23 @@ builder pack_subscribers_entry (int subscription_id) {
   int last_idx = (1 << 31) + ((1 << 31) - 1);
 
   (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
-  int prev_rate = performance_prev_s~load_grams();
-  int prev_aum = performance_prev_s~load_grams();
+
+  int prev_rate = performance_prev_s~load_grams(); ;; get rate in previous period
+  int prev_aum = performance_prev_s~load_grams(); ;; get aum in previous period
 
   int owners_share = 0;
   int owners_units = 0;
 
-  int managed_aum = aum - deposits;
-  int managed_units = units - withdrawals;
+  int managed_aum = aum - deposits; ;; calcaulte managed funds (actually doesn't include withdrawals, however I guess maybe it is common practice when initial AUM is taken)
+  int managed_units = units - withdrawals; ;; calculate managed units 
 
-  int new_rate = managed_aum / managed_units;
-  int new_units = aum / new_rate;
+  int new_rate = managed_aum / managed_units; ;; calculate the rate of unit 
+  int new_units = aum / new_rate; ;; calucate number of units 
 
-  if( (managed_units * new_rate) > (managed_units * prev_rate) )
+  if( (managed_units * new_rate) > (managed_units * prev_rate) ) ;; profir is the subject for incentive fee
   {
       owners_share = (((managed_units * new_rate) - (managed_units * prev_rate)) * owner_fee ) / 10000; ;; calculate incentive fee
-      owners_units = owners_share / new_rate;
-      ;; new_units += owners_units;
+      owners_units = owners_share / new_rate; ;; calculate units belongin to owner 
 
       var (s_subscriber, found) = subscribers.udict_get?(256, src_addr); ;; find owner's subscriptions
       var subscriber = s_subscriber~load_dict();
@@ -238,7 +238,6 @@ builder pack_subscribers_entry (int subscription_id) {
 
       subscriber~udict_set_builder(16, current_period + 1, pack_subscribers_entry(subscription_idx)); ;; create subscription for the owner in new period
       subscriptions~udict_set_builder(32, subscription_idx + 1, pack_subscription(owner, owners_share, current_period, 0, 1) ); ;; add new owner's subscription
-
 
   }
 
@@ -251,6 +250,7 @@ builder pack_subscribers_entry (int subscription_id) {
   return ();
 }
 
+;; sets the status of nominators wallet
 () process_activate_wallet(slice s_addr, int query_id, int wallet_id, int new_status) impure {
   (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
 
@@ -274,6 +274,7 @@ slice get_nominator_address(int address){
   );
 }
 
+;; send stake and balance request to all active nominators
 () process_fetch_balances(slice s_addr, int query_id ) impure {
   (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
 
@@ -299,11 +300,12 @@ slice get_nominator_address(int address){
   var (performance_s, found) = performance.udict_get?(16, current_period);
   (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
 
-
+  ;; sets AUM to the balance of pool smart contract only in current period
   performance~udict_set_builder(16, current_period,  pack_performance(rate, balance~first(), units, deposits, withdrawals  ) ); ;; update performance in closing period
   set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
 }
 
+;; receive data from nominator
 () process_got_balance(slice s_addr, int query_id, int balance, int stake ) impure {
   (int current_period, cell pool_config, cell performance, cell subscriptions, cell subscribers) = unpack_state();
 
@@ -318,11 +320,13 @@ slice get_nominator_address(int address){
   var (performance_s, found) = performance.udict_get?(16, current_period);
   (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
 
+  ;; add received stake and balance to current period
   performance~udict_set_builder(16, current_period,  pack_performance(rate, aum + balance + stake, units, deposits, withdrawals  )); ;; update poerformance in closing period
 
   set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
 }
 
+;; process redeem text R123 for example
 int decode_text(slice in_msg){
     var cur_char = in_msg~load_uint(8);
     throw_unless(56, cur_char != 52); ;; not a redemption request
@@ -335,6 +339,7 @@ int decode_text(slice in_msg){
     return res;
 }
 
+;; process internal messages
 () recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
     var cs = in_msg_cell.begin_parse();
     var flags = cs~load_uint(4);

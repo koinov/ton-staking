@@ -1,12 +1,12 @@
 cell pack_state(  int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) inline_ref {
   return begin_cell()
-    .store_uint(initialized, 1)
-    .store_uint(pool_address, 256)
-    .store_uint(wallet_id, 32)
-    .store_uint(stake_at, 32)
-    .store_grams(stake_sent)
-    .store_grams(balance)
-    .store_grams(stake)
+    .store_uint(initialized, 1) ;; is initialized 
+    .store_uint(pool_address, 256) ;; address of the pool
+    .store_uint(wallet_id, 32) ;; nominator ID
+    .store_uint(stake_at, 32) ;; current ellection
+    .store_grams(stake_sent) ;; grams sent to electino smart contract
+    .store_grams(balance) ;; current balance
+    .store_grams(stake) ;; grams at stake
   .end_cell();
 }
 
@@ -31,7 +31,7 @@ cell pack_state(  int initialized, int pool_address, int wallet_id, int stake_at
 builder pack_stake_order(int validator_pubkey, int stake_at, int max_factor, int adnl_address, slice signature) inline_ref {
     return(
         begin_cell()
-            .store_uint(validator_pubkey, 256)
+            .store_uint(validator_pubkey, 256) 
             .store_uint(stake_at, 32)
             .store_uint(max_factor, 32)
             .store_uint(adnl_address, 256)
@@ -71,7 +71,7 @@ int get_elector_addr() {
 
 
 
-
+;; stake is returned fully  allow new stakes from this nominator in this period 
 () process_return_stake(slice s_addr, int query_id, int reason, slice in_msg) impure {
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
 
@@ -79,14 +79,16 @@ int get_elector_addr() {
     throw_unless(43, ((src_wc == -1) & (src_addr == get_elector_addr())) ); ;; must be from election contract
 
 
-    stake_sent = 0;
+    stake_sent = 0; ;; reset last transfer 
     if( stake == 0 ){
-        stake_at = 0;
+        stake_at = 0; ;; allow staking if no previous stakes were made and accepted
     }
+
 
     set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent, balance, stake) );
 }
 
+;; stake is confirmed by ellecto smart contract
 () process_confirm_stake(slice s_addr, int query_id, slice in_msg) impure {
     var (src_wc, src_addr) = parse_std_addr(s_addr);
     throw_unless(43, ((src_wc == -1) & (src_addr == get_elector_addr())) ); ;; must be from election contract
@@ -94,31 +96,32 @@ int get_elector_addr() {
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent,  int balance, int stake) = unpack_state( get_data());
 
 
-    stake = stake_sent;
-    stake_sent = 0;
+    stake = stake_sent; ;; sent amount is transferred to stake field
+    stake_sent = 0; ;; reset stake in transfer
     set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent,  balance, stake) );
 }
 
+;; stake recovered  
 () process_recover_stake(slice s_addr, int query_id, int msg_value, slice in_msg) impure {
     var (src_wc, src_addr) = parse_std_addr(s_addr);
     throw_unless(43, ((src_wc == -1) & (src_addr == get_elector_addr())) ); ;; must be from election contract
 
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
 
-
-    if( msg_value >= stake ){
+    ;; TODO handle elector fees
+    if( msg_value >= stake ){ ;; recovered amount exeeds stake, funds are fully recovered
         stake_at = 0;
         stake = 0;
-    } else {
-        stake -= msg_value;
+    } else { ;; funds are recovered partially
+        stake -= msg_value; 
     }
     balance += msg_value;
-
 
     set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent,  balance, stake) );
 }
 
-
+;; process new stake request receied from pool
+;; TODO add operator
 () process_stake(slice s_addr, int query_id, int grams, slice in_msg ) impure {
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
     var (src_wc, src_addr) = parse_std_addr(s_addr);
@@ -141,6 +144,7 @@ int get_elector_addr() {
     set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent,  balance, stake) );
 }
 
+;; process revover stake request recevied from pool
 () process_recover_stake_request(slice s_addr, int query_id, slice in_msg ) impure {
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
     var (src_wc, src_addr) = parse_std_addr(s_addr);
@@ -152,6 +156,7 @@ int get_elector_addr() {
 
 }
 
+;; process withdraw funds request  recevied from pool
 () process_withdraw_request(slice s_addr, int query_id, int grams, slice in_msg ) impure {
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
     var (src_wc, src_addr) = parse_std_addr(s_addr);
@@ -161,6 +166,7 @@ int get_elector_addr() {
     send_message( s_addr, 0x534e5254, query_id, null(), grams, 3 ); ;; TRNS
 }
 
+;; process balance request recevied from pool
 () process_update_balance_request(slice s_addr, int query_id, slice in_msg ) impure {
     (int initialized, int pool_address, int wallet_id, int stake_at, int stake_sent, int balance, int stake) = unpack_state( get_data());
     var (src_wc, src_addr) = parse_std_addr(s_addr);
@@ -175,6 +181,7 @@ int get_elector_addr() {
     set_data( pack_state(initialized, pool_address, wallet_id, stake_at, stake_sent, balance, stake) );
 }
 
+;; process internal messages from elector and pool smart contracts
 () recv_internal(int msg_value, cell in_msg_cell, slice in_msg) impure {
     var cs = in_msg_cell.begin_parse();
     var flags = cs~load_uint(4);
