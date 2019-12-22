@@ -16,8 +16,8 @@ Security is another cornerstone. Any kind of crypto related operations require p
 
 ## Solution 
 
-Built on 100% mutual mistrust principle, staking pool allows grams holder, who want to take a part in validation process by providing Grams, to be a part of liquidity pool operated by a pool owner, who doesn't actually have access to Grams, except the predefined incentive fee, paid periodically depending on performance. 
-Pool operates multiple nodes to achieve best results, distributing stakes among running nodes.  
+Staking pool is built on mutual mistrust principle that protects subscribers from fraudulent operator and hackers attack, and guarantees their funds are operated properly. Pool owner doesn't actually have access to Grams, except the predefined incentive fee, paid periodically depending on performance. 
+Pool can operate multiple nodes to achieve best results from being validator in TON network.  
 
 ## Benefits
 
