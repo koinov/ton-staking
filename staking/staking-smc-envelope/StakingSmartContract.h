@@ -20,7 +20,8 @@
 
 #include "vm/cells.h"
 #include "vm/stack.hpp"
-#include "vm/continuation.h"
+//#include "vm/continuation.h"
+#include "vm/vm.h"
 
 #include "td/utils/optional.h"
 #include "td/utils/crypto.h"

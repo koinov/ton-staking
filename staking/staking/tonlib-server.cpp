@@ -114,42 +114,38 @@ void sync(Client& client) {
 
 static td::uint32 default_wallet_id{0};
 std::string wallet_address(Client& client, const Key& key) {
-  return sync_send(client,
-                   make_object<tonlib_api::wallet_v3_getAccountAddress>(
-                       make_object<tonlib_api::wallet_v3_initialAccountState>(key.public_key, default_wallet_id)))
-      .move_as_ok()
-      ->account_address_;
+    return sync_send(client,
+                     make_object<tonlib_api::getAccountAddress>(
+                             make_object<tonlib_api::wallet_v3_initialAccountState>(key.public_key, default_wallet_id), 0))
+            .move_as_ok()
+            ->account_address_;
 }
-
 
 
 AccountState get_account_state(Client& client, std::string address) {
-  auto generic_state = sync_send(client, tonlib_api::make_object<tonlib_api::generic_getAccountState>(
-      tonlib_api::make_object<tonlib_api::accountAddress>(address)))
-      .move_as_ok();
-  AccountState res;
-  tonlib_api::downcast_call(*generic_state, [&](auto& state) {
-      res.balance = state.account_state_->balance_;
-      res.sync_utime = state.account_state_->sync_utime_;
-      res.last_transaction_id.lt = state.account_state_->last_transaction_id_->lt_;
-      res.last_transaction_id.hash = state.account_state_->last_transaction_id_->hash_;
-  });
-  res.address = address;
-  switch (generic_state->get_id()) {
-    case tonlib_api::generic_accountStateUninited::ID:
-      res.type = AccountState::Empty;
-      break;
-    case tonlib_api::generic_accountStateWalletV3::ID:
-    case tonlib_api::generic_accountStateWallet::ID:
-      res.type = AccountState::Wallet;
-      break;
-    default:
-      res.type = AccountState::Unknown;
-      break;
-  }
-  return res;
+    auto state = sync_send(client, tonlib_api::make_object<tonlib_api::getAccountState>(
+            tonlib_api::make_object<tonlib_api::accountAddress>(address)))
+            .move_as_ok();
+    AccountState res;
+    res.balance = state->balance_;
+    res.sync_utime = state->sync_utime_;
+    res.last_transaction_id.lt = state->last_transaction_id_->lt_;
+    res.last_transaction_id.hash = state->last_transaction_id_->hash_;
+    res.address = address;
+    switch (state->account_state_->get_id()) {
+        case tonlib_api::uninited_accountState::ID:
+            res.type = AccountState::Empty;
+            break;
+        case tonlib_api::wallet_v3_accountState::ID:
+        case tonlib_api::wallet_accountState::ID:
+            res.type = AccountState::Wallet;
+            break;
+        default:
+            res.type = AccountState::Unknown;
+            break;
+    }
+    return res;
 }
-
 struct QueryId {
     td::int64 id;
 };

@@ -79,7 +79,7 @@ add_executable(staking-cli staking/tonpool-cli.cpp)
 target_link_libraries(staking-cli tonlib tdactor tdutils terminal staking-smc-envelope)
 
 add_executable(staking-server staking/tonlib-server.cpp)
-target_link_libraries(staking-server tonlib tdactor tdutils terminal jsoncpp microhttpd jsonrpccpp-common jsonrpccpp-server staking-smc-envelope)
+target_link_libraries(staking-server tonlib tdactor tdutils terminal microhttpd jsoncpp jsonrpccpp-common jsonrpccpp-server staking-smc-envelope)
 
 
 include(CMakePackageConfigHelpers)

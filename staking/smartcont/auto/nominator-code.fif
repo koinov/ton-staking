@@ -20,8 +20,8 @@ PROGRAM{
   DECLPROC recv_external
   pack_state PROCREF:<{
     //  initialized pool_address wallet_id stake_at stake_sent balance stake
-    NEWC	//  initialized pool_address wallet_id stake_at stake_sent balance stake _7
-    s1 s7 XCHG	//  stake pool_address wallet_id stake_at stake_sent balance initialized _7
+    s0 s6 XCHG
+    NEWC	//  stake pool_address wallet_id stake_at stake_sent balance initialized _7
     1 STU	//  stake pool_address wallet_id stake_at stake_sent balance _9
     s1 s5 XCHG	//  stake balance wallet_id stake_at stake_sent pool_address _9
     256 STU	//  stake balance wallet_id stake_at stake_sent _11
@@ -68,8 +68,8 @@ PROGRAM{
     SWAP	//  validator_pubkey stake_at max_factor adnl_address _5 signature
     STSLICER	//  validator_pubkey stake_at max_factor adnl_address _6
     ENDC	//  validator_pubkey stake_at max_factor adnl_address _7
-    NEWC	//  validator_pubkey stake_at max_factor adnl_address _7 _8
-    s1 s5 XCHG	//  _7 stake_at max_factor adnl_address validator_pubkey _8
+    s0 s4 XCHG
+    NEWC	//  _7 stake_at max_factor adnl_address validator_pubkey _8
     256 STU	//  _7 stake_at max_factor adnl_address _10
     s1 s3 XCHG	//  _7 adnl_address max_factor stake_at _10
     32 STU	//  _7 adnl_address max_factor _12
@@ -143,14 +143,12 @@ PROGRAM{
     0 EQINT	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0 _25
     IF:<{	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0
       s2 POP	//  balance initialized pool_address wallet_id stake_sent=0 stake
-      OVER	//  balance initialized pool_address wallet_id stake_sent=0 stake stake_at=0
-    }>ELSE<{
-      s0 s2 XCHG	//  balance initialized pool_address wallet_id stake_sent=0 stake stake_at
-    }>
+      OVER	//  balance initialized pool_address wallet_id stake_at=0 stake stake_sent=0
+    }>	//  balance initialized pool_address wallet_id stake_at stake stake_sent=0
     s5 s6 XCHG
     s4 s5 XCHG
     s3 s4 XCHG
-    s3 s3 XCHG2	//  initialized pool_address wallet_id stake_at stake_sent=0 balance stake
+    s0 s3 s3 XCHG3	//  initialized pool_address wallet_id stake_at stake_sent=0 balance stake
     pack_state INLINECALLDICT	//  _27
     c4 POP
   }>
@@ -237,9 +235,9 @@ PROGRAM{
     SUB	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance
     s2 PUSH	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance stake_at
     get_elector_addr_s CALLDICT	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance stake_at _40
-    1316189259 PUSHINT	//  stake stake_sent grams initialized pool_address wallet_id signature adnl_address validator_pubkey msg_stake_at max_factor balance stake_at _40 _41=1316189259
-    s3 s6 XCHG
-    s5 s4 s7 XCHG3
+    s5 s4 s0 XCHG3
+    1316189259 PUSHINT
+    s4 s7 XCHG2
     1 PUSHINT
     s0 s9 XCHG	//  stake stake_sent grams initialized pool_address wallet_id _42=1 _41=1316189259 balance stake_at _40 validator_pubkey msg_stake_at max_factor adnl_address signature
     pack_stake_order INLINECALLDICT	//  stake stake_sent grams initialized pool_address wallet_id _42=1 _41=1316189259 balance stake_at _40 _43
@@ -295,8 +293,8 @@ PROGRAM{
     40 THROWIFNOT
     s0 s2 XCHG	//  grams query_id s_addr
     1397641812 PUSHINT	//  grams query_id s_addr _24=1397641812
-    PUSHNULL	//  grams query_id s_addr _24=1397641812 _25
-    s4 s3 s0 XCHG3
+    2SWAP
+    PUSHNULL
     ROT
     3 PUSHINT	//  s_addr _24=1397641812 query_id _25 grams _26=3
     send_message CALLDICT
@@ -326,10 +324,9 @@ PROGRAM{
     STGRAMS	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _29
     ENDC	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _30
     CTOS	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _31
-    1000000 PUSHINT	//  balance query_id initialized pool_address wallet_id stake_at stake_sent stake s_addr _26=1279415367 _31 _32=1000000
-    s3 s4 XCHG
-    s2 s3 XCHG
-    s2 s10 XCHG
+    s1 s3 s0 XCHG3
+    s1 s9 XCHG
+    1000000 PUSHINT
     3 PUSHINT	//  balance stake initialized pool_address wallet_id stake_at stake_sent s_addr _26=1279415367 query_id _31 _32=1000000 _33=3
     send_message CALLDICT
     2 5 BLKSWAP	//  initialized pool_address wallet_id stake_at stake_sent balance stake
@@ -353,9 +350,8 @@ PROGRAM{
     SEMPTY	//  msg_value in_msg s_addr _17
     IFJMP:<{	//  msg_value in_msg s_addr
       NIP	//  msg_value s_addr
-      SWAP
       0 PUSHINT
-      SWAP	//  s_addr _18=0 msg_value
+      ROT	//  s_addr _18=0 msg_value
       process_simple_transfer CALLDICT
     }>	//  msg_value in_msg s_addr
     SWAP	//  msg_value s_addr in_msg
@@ -364,9 +360,8 @@ PROGRAM{
     0 EQINT	//  msg_value s_addr op in_msg _25
     IFJMP:<{	//  msg_value s_addr op in_msg
       2DROP	//  msg_value s_addr
-      SWAP
       0 PUSHINT
-      SWAP	//  s_addr _26=0 msg_value
+      ROT	//  s_addr _26=0 msg_value
       process_simple_transfer CALLDICT
     }>	//  msg_value s_addr op in_msg
     64 LDU	//  msg_value s_addr op query_id in_msg
@@ -411,8 +406,7 @@ PROGRAM{
     1316189259 PUSHINT	//  msg_value s_addr op query_id in_msg op _53=1316189259
     EQUAL	//  msg_value s_addr op query_id in_msg _54
     IFJMP:<{	//  msg_value s_addr op query_id in_msg
-      s2 POP	//  msg_value s_addr in_msg query_id
-      SWAP	//  msg_value s_addr query_id in_msg
+      1 2 BLKDROP2	//  msg_value s_addr query_id in_msg
       LDGRAMS	//  msg_value s_addr query_id _86 _85
       NIP	//  msg_value s_addr query_id in_msg
       s1 s3 s0 XCHG3	//  s_addr query_id msg_value in_msg
