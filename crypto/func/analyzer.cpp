@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "func.h"
 
@@ -29,6 +29,7 @@ namespace funC {
 void CodeBlob::simplify_var_types() {
   for (TmpVar& var : vars) {
     TypeExpr::remove_indirect(var.v_type);
+    var.v_type->recompute_width();
   }
 }
 
@@ -354,7 +355,9 @@ bool Op::compute_used_vars(const CodeBlob& code, bool edit) {
     case _IntConst:
     case _GlobVar:
     case _Call:
-    case _CallInd: {
+    case _CallInd:
+    case _Tuple:
+    case _UnTuple: {
       // left = EXEC right;
       if (!next_var_info.count_used(left) && is_pure()) {
         // all variables in `left` are not needed
@@ -364,6 +367,13 @@ bool Op::compute_used_vars(const CodeBlob& code, bool edit) {
         return std_compute_used_vars(true);
       }
       return std_compute_used_vars();
+    }
+    case _SetGlob: {
+      // GLOB = right
+      if (right.empty() && edit) {
+        disable();
+      }
+      return std_compute_used_vars(right.empty());
     }
     case _Let: {
       // left = right
@@ -531,8 +541,11 @@ bool prune_unreachable(std::unique_ptr<Op>& ops) {
   switch (op.cl) {
     case Op::_IntConst:
     case Op::_GlobVar:
+    case Op::_SetGlob:
     case Op::_Call:
     case Op::_CallInd:
+    case Op::_Tuple:
+    case Op::_UnTuple:
     case Op::_Import:
       reach = true;
       break;
@@ -694,7 +707,6 @@ VarDescrList Op::fwd_analyze(VarDescrList values) {
       values.add_newval(left[0]).set_const(int_const);
       break;
     }
-    case _GlobVar:
     case _Call: {
       prepare_args(values);
       auto func = dynamic_cast<const SymValAsmFunc*>(fun_ref->value);
@@ -717,12 +729,17 @@ VarDescrList Op::fwd_analyze(VarDescrList values) {
       }
       break;
     }
+    case _Tuple:
+    case _UnTuple:
+    case _GlobVar:
     case _CallInd: {
       for (var_idx_t i : left) {
         values.add_newval(i);
       }
       break;
     }
+    case _SetGlob:
+      break;
     case _Let: {
       std::vector<VarDescr> old_val;
       assert(left.size() == right.size());
@@ -832,6 +849,9 @@ bool Op::mark_noreturn() {
     case _Import:
     case _IntConst:
     case _Let:
+    case _Tuple:
+    case _UnTuple:
+    case _SetGlob:
     case _GlobVar:
     case _CallInd:
     case _Call:

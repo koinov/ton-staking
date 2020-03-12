@@ -323,6 +323,7 @@ if (LATEX_FOUND)
   add_latex_document(doc/tvm.tex TARGET_NAME ton_vm_description)
   add_latex_document(doc/tblkch.tex TARGET_NAME ton_blockchain_description)
   add_latex_document(doc/fiftbase.tex TARGET_NAME fift_basic_description)
+  add_latex_document(doc/catchain.tex TARGET_NAME catchain_consensus_description)
 endif()
 #END internal
 
@@ -374,6 +375,8 @@ add_subdirectory(validator-engine)
 add_subdirectory(validator-engine-console)
 add_subdirectory(dht-server)
 add_subdirectory(utils)
+add_subdirectory(http)
+add_subdirectory(rldp-http-proxy)
 endif()
 #END internal
 
@@ -473,6 +476,9 @@ target_link_libraries(test-ton-collator overlay tdutils tdactor adnl tl_api dht
 #add_executable(test-ext-client test/test-ext-client.cpp)
 #target_link_libraries(test-ext-client tdutils tdactor adnl tl_api tl-lite-utils)
 
+add_executable(test-http test/test-http.cpp)
+target_link_libraries(test-http PRIVATE tonhttp)
+
 get_directory_property(HAS_PARENT PARENT_DIRECTORY)
 if (HAS_PARENT)
   set(ALL_TEST_SOURCE
@@ -513,7 +519,7 @@ if (NOT TON_ONLY_TONLIB)
 add_test(test-adnl test-adnl)
 add_test(test-dht test-dht)
 add_test(test-rldp test-rldp)
-add_test(test-validator-session-state test-validator-session-state)
+#add_test(test-validator-session-state test-validator-session-state)
 add_test(test-catchain test-catchain)
 
 add_test(test-fec test-fec)

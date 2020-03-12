@@ -14,12 +14,13 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "vm/stack.hpp"
 #include "vm/continuation.h"
 #include "vm/box.hpp"
 #include "vm/atom.h"
+#include "vm/vmstate.h"
 
 namespace td {
 template class td::Cnt<std::string>;
@@ -555,7 +556,7 @@ void Stack::push_int_quiet(td::RefInt256 val, bool quiet) {
     if (!quiet) {
       throw VmError{Excno::int_ov};
     } else if (val->is_valid()) {
-      push(td::RefInt256{true});
+      push(td::make_refint());
       return;
     }
   }
@@ -591,7 +592,7 @@ void Stack::push_builder(Ref<CellBuilder> cb) {
 }
 
 void Stack::push_smallint(long long val) {
-  push(td::RefInt256{true, val});
+  push(td::make_refint(val));
 }
 
 void Stack::push_bool(bool val) {
@@ -678,6 +679,10 @@ void Stack::push_maybe_cellslice(Ref<CellSlice> cs) {
  */
 
 bool StackEntry::serialize(vm::CellBuilder& cb, int mode) const {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
   switch (tp) {
     case t_null:
       return cb.store_long_bool(0, 8);  // vm_stk_null#00 = VmStackValue;
@@ -739,6 +744,10 @@ bool StackEntry::serialize(vm::CellBuilder& cb, int mode) const {
 }
 
 bool StackEntry::deserialize(CellSlice& cs, int mode) {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
   clear();
   int t = (mode & 0xf000) ? ((mode >> 12) & 15) : (int)cs.prefetch_ulong(8);
   switch (t) {
@@ -754,7 +763,7 @@ bool StackEntry::deserialize(CellSlice& cs, int mode) {
       t = (int)cs.prefetch_ulong(16) & 0x1ff;
       if (t == 0xff) {
         // vm_stk_nan#02ff = VmStackValue;
-        return cs.advance(16) && set_int(td::RefInt256{true});
+        return cs.advance(16) && set_int(td::make_refint());
       } else {
         // vm_stk_int#0201_ value:int257 = VmStackValue;
         td::RefInt256 val;
@@ -824,7 +833,7 @@ bool StackEntry::deserialize(CellSlice& cs, int mode) {
           return false;
         }
       } else if (n == 1) {
-        return cs.have_refs() && t[0].deserialize(cs.fetch_ref(), mode);
+        return cs.have_refs() && t[0].deserialize(cs.fetch_ref(), mode) && set(t_tuple, std::move(tuple));
       }
       return set(t_tuple, std::move(tuple));
     }
@@ -843,6 +852,10 @@ bool StackEntry::deserialize(Ref<Cell> cell, int mode) {
 }
 
 bool Stack::serialize(vm::CellBuilder& cb, int mode) const {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
   // vm_stack#_ depth:(## 24) stack:(VmStackList depth) = VmStack;
   unsigned n = depth();
   if (!cb.store_ulong_rchk_bool(n, 24)) {  // vm_stack#_ depth:(## 24)
@@ -863,6 +876,10 @@ bool Stack::serialize(vm::CellBuilder& cb, int mode) const {
 }
 
 bool Stack::deserialize(vm::CellSlice& cs, int mode) {
+  auto* vsi = VmStateInterface::get();
+  if (vsi && !vsi->register_op()) {
+    return false;
+  }
   clear();
   // vm_stack#_ depth:(## 24) stack:(VmStackList depth) = VmStack;
   int n;

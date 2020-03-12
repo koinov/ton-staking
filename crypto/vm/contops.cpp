@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include <functional>
 #include "vm/contops.h"
@@ -24,6 +24,7 @@
 #include "vm/continuation.h"
 #include "vm/cellops.h"
 #include "vm/excno.hpp"
+#include "vm/vm.h"
 
 namespace vm {
 
@@ -491,6 +492,7 @@ int exec_setcontargs_common(VmState* st, int copy, int more) {
       } else {
         cdata->stack.write().move_from_stack(stack, copy);
       }
+      st->consume_stack_gas(cdata->stack);
       if (cdata->nargs >= 0) {
         cdata->nargs -= copy;
       }
@@ -556,6 +558,7 @@ int exec_return_args_common(VmState* st, int count) {
     cdata->stack.write().move_from_stack(alt_stk.write(), copy);
     alt_stk.clear();
   }
+  st->consume_stack_gas(cdata->stack);
   if (cdata->nargs >= 0) {
     cdata->nargs -= copy;
   }
@@ -586,6 +589,7 @@ int exec_bless_args_common(VmState* st, int copy, int more) {
   stack.check_underflow(copy + 1);
   auto cs = stack.pop_cellslice();
   auto new_stk = stack.split_top(copy);
+  st->consume_stack_gas(new_stk);
   stack.push_cont(Ref<OrdCont>{true, std::move(cs), st->get_cp(), std::move(new_stk), more});
   return 0;
 }

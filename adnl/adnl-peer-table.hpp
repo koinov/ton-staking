@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -43,16 +43,19 @@ class AdnlPeerTableImpl : public AdnlPeerTable {
   void add_peer(AdnlNodeIdShort local_id, AdnlNodeIdFull id, AdnlAddressList addr_list) override;
   void add_static_nodes_from_config(AdnlNodesList nodes) override;
 
-  void receive_packet(td::BufferSlice data) override;
+  void receive_packet(td::IPAddress addr, td::BufferSlice data) override;
   void receive_decrypted_packet(AdnlNodeIdShort dst, AdnlPacket data) override;
-  void send_message_in(AdnlNodeIdShort src, AdnlNodeIdShort dst, AdnlMessage message) override;
+  void send_message_in(AdnlNodeIdShort src, AdnlNodeIdShort dst, AdnlMessage message, td::uint32 flags) override;
   void send_message(AdnlNodeIdShort src, AdnlNodeIdShort dst, td::BufferSlice data) override {
+    send_message_ex(src, dst, std::move(data), 0);
+  }
+  void send_message_ex(AdnlNodeIdShort src, AdnlNodeIdShort dst, td::BufferSlice data, td::uint32 flags) override {
     if (data.size() > huge_packet_max_size()) {
       VLOG(ADNL_WARNING) << "dropping too big packet [" << src << "->" << dst << "]: size=" << data.size();
       VLOG(ADNL_WARNING) << "DUMP: " << td::buffer_to_hex(data.as_slice().truncate(128));
       return;
     }
-    send_message_in(src, dst, AdnlMessage{adnlmessage::AdnlMessageCustom{std::move(data)}});
+    send_message_in(src, dst, AdnlMessage{adnlmessage::AdnlMessageCustom{std::move(data)}}, flags);
   }
   void answer_query(AdnlNodeIdShort src, AdnlNodeIdShort dst, AdnlQueryId query_id, td::BufferSlice data) override;
   void send_query(AdnlNodeIdShort src, AdnlNodeIdShort dst, std::string name, td::Promise<td::BufferSlice> promise,
@@ -61,7 +64,7 @@ class AdnlPeerTableImpl : public AdnlPeerTable {
                      td::Timestamp timeout, td::BufferSlice data, td::uint64 max_answer_size) override {
     send_query(src, dst, name, std::move(promise), timeout, std::move(data));
   }
-  void add_id(AdnlNodeIdFull id, AdnlAddressList addr_list) override;
+  void add_id_ex(AdnlNodeIdFull id, AdnlAddressList addr_list, td::uint32 mode) override;
   void del_id(AdnlNodeIdShort id, td::Promise<td::Unit> promise) override;
   void subscribe(AdnlNodeIdShort dst, std::string prefix, std::unique_ptr<Callback> callback) override;
   void unsubscribe(AdnlNodeIdShort dst, std::string prefix) override;
@@ -111,7 +114,7 @@ class AdnlPeerTableImpl : public AdnlPeerTable {
   void deliver_one_message(AdnlNodeIdShort src, AdnlNodeIdShort dst, AdnlMessage message);
 
   std::map<AdnlNodeIdShort, td::actor::ActorOwn<AdnlPeer>> peers_;
-  std::map<AdnlNodeIdShort, td::actor::ActorOwn<AdnlLocalId>> local_ids_own_;
+  std::map<AdnlNodeIdShort, std::pair<td::actor::ActorOwn<AdnlLocalId>, td::uint32>> local_ids_;
   std::map<AdnlChannelIdShort, td::actor::ActorId<AdnlChannel>> channels_;
 
   td::actor::ActorOwn<AdnlDb> db_;

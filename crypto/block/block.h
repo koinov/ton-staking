@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "common/refcnt.hpp"
@@ -323,8 +323,8 @@ struct CurrencyCollection {
     grams.clear();
     return false;
   }
-  bool validate() const;
-  bool validate_extra() const;
+  bool validate(int max_cells = 1024) const;
+  bool validate_extra(int max_cells = 1024) const;
   bool operator==(const CurrencyCollection& other) const;
   bool operator!=(const CurrencyCollection& other) const {
     return !operator==(other);
@@ -360,7 +360,7 @@ struct CurrencyCollection {
   bool fetch(vm::CellSlice& cs);
   bool fetch_exact(vm::CellSlice& cs);
   bool unpack(Ref<vm::CellSlice> csr);
-  bool validate_unpack(Ref<vm::CellSlice> csr);
+  bool validate_unpack(Ref<vm::CellSlice> csr, int max_cells = 1024);
   Ref<vm::CellSlice> pack() const;
   bool pack_to(Ref<vm::CellSlice>& csr) const {
     return (csr = pack()).not_null();
@@ -606,7 +606,8 @@ bool unpack_CurrencyCollection(Ref<vm::CellSlice> csr, td::RefInt256& value, Ref
 bool valid_library_collection(Ref<vm::Cell> cell, bool catch_errors = true);
 
 bool valid_config_data(Ref<vm::Cell> cell, const td::BitArray<256>& addr, bool catch_errors = true,
-                       bool relax_par0 = false);
+                       bool relax_par0 = false, Ref<vm::Cell> old_mparams = {});
+bool config_params_present(vm::Dictionary& dict, Ref<vm::Cell> param_dict_root);
 
 bool add_extra_currency(Ref<vm::Cell> extra1, Ref<vm::Cell> extra2, Ref<vm::Cell>& res);
 bool sub_extra_currency(Ref<vm::Cell> extra1, Ref<vm::Cell> extra2, Ref<vm::Cell>& res);

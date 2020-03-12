@@ -14,7 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with TON Blockchain.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 #include "common/refcnt.hpp"
@@ -534,6 +534,22 @@ class Config {
   bool create_stats_enabled() const {
     return has_capability(ton::capCreateStatsEnabled);
   }
+  std::unique_ptr<vm::Dictionary> get_param_dict(int idx) const;
+  td::Result<std::vector<int>> unpack_param_list(int idx) const;
+  std::unique_ptr<vm::Dictionary> get_mandatory_param_dict() const {
+    return get_param_dict(9);
+  }
+  std::unique_ptr<vm::Dictionary> get_critical_param_dict() const {
+    return get_param_dict(10);
+  }
+  td::Result<std::vector<int>> get_mandatory_param_list() const {
+    return unpack_param_list(9);
+  }
+  td::Result<std::vector<int>> get_critical_param_list() const {
+    return unpack_param_list(10);
+  }
+  bool all_mandatory_params_defined(int* bad_idx_ptr = nullptr) const;
+  td::Result<ton::StdSmcAddress> get_dns_root_addr() const;
   bool set_block_id_ext(const ton::BlockIdExt& block_id_ext);
   td::Result<std::vector<ton::StdSmcAddress>> get_special_smartcontracts(bool without_config = false) const;
   bool is_special_smartcontract(const ton::StdSmcAddress& addr) const;
@@ -579,6 +595,8 @@ class Config {
   static td::Result<std::unique_ptr<Config>> extract_from_state(Ref<vm::Cell> mc_state_root, int mode = 0);
   static td::Result<std::unique_ptr<Config>> extract_from_key_block(Ref<vm::Cell> key_block_root, int mode = 0);
   static td::Result<std::pair<ton::UnixTime, ton::UnixTime>> unpack_validator_set_start_stop(Ref<vm::Cell> root);
+  static td::Result<std::vector<int>> unpack_param_dict(vm::Dictionary& dict);
+  static td::Result<std::vector<int>> unpack_param_dict(Ref<vm::Cell> dict_root);
 
  protected:
   Config(int _mode) : mode(_mode) {

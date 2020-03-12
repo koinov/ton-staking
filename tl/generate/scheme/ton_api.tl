@@ -67,7 +67,7 @@ adnl.address.udp6 ip:int128 port:int = adnl.Address;
 //adnl.address.tcp ip:int port:int = adnl.Address;
 //adnl.address.tcp6 ip:int128 port:int = adnl.Address;
 
-//adnl.address.tunnel to:adnl.Address tunid: = adnl.Address; 
+adnl.address.tunnel to:int256 pubkey:PublicKey = adnl.Address; 
 
 adnl.addressList addrs:(vector adnl.Address) version:int reinit_date:int priority:int expire_at:int = adnl.AddressList;
 
@@ -96,6 +96,17 @@ adnl.packetContents
   signature:flags.11?bytes 
   rand2:bytes 
         = adnl.PacketContents;
+
+adnl.tunnelPacketContents 
+  rand1:bytes 
+  flags:# 
+  from_ip:flags.0?int
+  from_port:flags.0?int
+  message:flags.1?bytes 
+  statistics:flags.2?bytes
+  payment:flags.3?bytes
+  rand2:bytes 
+        = adnl.TunnelPacketContents;
 
 
 adnl.message.createChannel key:int256 date:int = adnl.Message;
@@ -614,3 +625,25 @@ engine.validator.createElectionBid election_date:int election_addr:string wallet
 engine.validator.checkDhtServers id:int256 = engine.validator.DhtServersStatus;
 
 engine.validator.controlQuery data:bytes = Object;
+
+
+---types---
+
+http.header name:string value:string = http.Header;
+http.payloadPart data:bytes trailer:(vector http.header) last:Bool = http.PayloadPart;
+http.response http_version:string status_code:int reason:string headers:(vector http.header) = http.Response;
+
+---functions---
+
+http.request id:int256 method:string url:string http_version:string headers:(vector http.header) = http.Response;
+http.getNextPayloadPart id:int256 seqno:int max_chunk_size:int = http.PayloadPart;
+
+---types---
+
+
+http.server.dnsEntry domain:string addr:adnl.id.short = http.server.DnsEntry;
+http.server.host domains:(vector string) ip:int port:int adnl_id:adnl.id.short = http.server.Host;
+
+http.server.config dhs:(vector http.server.dnsEntry) local_hosts:(vector http.server.host) = http.server.Config;
+
+---functions---

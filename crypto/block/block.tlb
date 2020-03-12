@@ -572,6 +572,17 @@ _ to_mint:ExtraCurrencyCollection = ConfigParam 7;
 capabilities#c4 version:uint32 capabilities:uint64 = GlobalVersion;
 _ GlobalVersion = ConfigParam 8;  // all zero if absent
 _ mandatory_params:(Hashmap 32 True) = ConfigParam 9;
+_ critical_params:(Hashmap 32 True) = ConfigParam 10;
+
+cfg_vote_cfg#36 min_tot_rounds:uint8 max_tot_rounds:uint8 min_wins:uint8 max_losses:uint8 min_store_sec:uint32 max_store_sec:uint32 bit_price:uint32 cell_price:uint32 = ConfigProposalSetup;
+cfg_vote_setup#91 normal_params:^ConfigProposalSetup critical_params:^ConfigProposalSetup = ConfigVotingSetup;
+_ ConfigVotingSetup = ConfigParam 11;
+
+cfg_proposal#f3 param_id:int32 param_value:(Maybe ^Cell) if_hash_equal:(Maybe uint256) 
+  = ConfigProposal;
+cfg_proposal_status#ce expires:uint32 proposal:^ConfigProposal is_critical:Bool
+  voters:(HashmapE 16 True) remaining_weight:int64 validator_set_id:uint256 
+  rounds_remaining:uint8 wins:uint8 losses:uint8 = ConfigProposalStatus;
 
 wfmt_basic#1 vm_version:int32 vm_mode:uint64 = WorkchainFormat 1;
 wfmt_ext#0 min_addr_len:(## 12) max_addr_len:(## 12) addr_len_step:(## 12)
@@ -727,3 +738,33 @@ after:^VmCont = VmCont;
 vmc_while_body$110011 cond:^VmCont body:^VmCont
 after:^VmCont = VmCont;
 vmc_pushint$1111 value:int32 next:^VmCont = VmCont;
+
+//
+//  DNS RECORDS
+//
+_ (HashmapE 16 ^DNSRecord) = DNS_RecordSet;
+
+chunk_ref$_ {n:#} ref:^(TextChunks (n + 1)) = TextChunkRef (n + 1);
+chunk_ref_empty$_ = TextChunkRef 0;
+text_chunk$_ {n:#} len:(## 8) data:(bits (len * 8)) next:(TextChunkRef n) = TextChunks (n + 1);
+text_chunk_empty$_ = TextChunks 0;
+text$_ chunks:(## 8) rest:(TextChunks chunks) = Text;
+dns_text#1eda _:Text = DNSRecord;
+
+dns_next_resolver#ba93 resolver:MsgAddressInt = DNSRecord;  // usually in record #-1
+
+dns_adnl_address#ad01 adnl_addr:bits256 flags:(## 8) { flags <= 1 }
+  proto_list:flags . 0?ProtoList = DNSRecord;  // often in record #2
+proto_list_nil$0 = ProtoList;
+proto_list_next$1 head:Protocol tail:ProtoList = ProtoList;
+proto_http#4854 = Protocol;
+
+dns_smc_address#9fd3 smc_addr:MsgAddressInt flags:(## 8) { flags <= 1 }
+  cap_list:flags . 0?SmcCapList = DNSRecord;   // often in record #1
+cap_list_nil$0 = SmcCapList;
+cap_list_next$1 head:SmcCapability tail:SmcCapList = SmcCapList;
+cap_method_seqno#5371 = SmcCapability;
+cap_method_pubkey#71f4 = SmcCapability;
+cap_is_wallet#2177 = SmcCapability;
+cap_name#ff name:Text = SmcCapability;
+

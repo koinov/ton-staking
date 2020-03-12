@@ -1,3 +1,21 @@
+/*
+    This file is part of TON Blockchain Library.
+
+    TON Blockchain Library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    TON Blockchain Library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
+
+    Copyright 2019-2020 Telegram Systems LLP
+*/
 #include "archive-manager.hpp"
 #include "td/actor/MultiPromise.h"
 #include "td/utils/overloaded.h"
@@ -504,6 +522,13 @@ void ArchiveManager::load_package(PackageId id) {
     return;
   }
 
+  std::string prefix = PSTRING() << db_root_ << id.path() << id.name();
+  auto f = td::FileFd::open(prefix + ".pack", td::FileFd::Read);
+  if (f.is_error()) {
+    x->deleted_ = true;
+    return;
+  }
+
   FileDescription desc{id, false};
   if (!id.temp) {
     for (auto &e : x->firstblocks_) {
@@ -512,7 +537,6 @@ void ArchiveManager::load_package(PackageId id) {
     }
   }
 
-  std::string prefix = PSTRING() << db_root_ << id.path() << id.name();
   desc.file = td::actor::create_actor<ArchiveSlice>("slice", id.key, id.temp, prefix);
 
   get_file_map(id).emplace(id, std::move(desc));

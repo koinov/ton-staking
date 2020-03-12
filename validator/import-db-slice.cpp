@@ -1,3 +1,21 @@
+/*
+    This file is part of TON Blockchain Library.
+
+    TON Blockchain Library is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lesser General Public License as published by
+    the Free Software Foundation, either version 2 of the License, or
+    (at your option) any later version.
+
+    TON Blockchain Library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Lesser General Public License for more details.
+
+    You should have received a copy of the GNU Lesser General Public License
+    along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
+
+    Copyright 2019-2020 Telegram Systems LLP
+*/
 #include "import-db-slice.hpp"
 #include "validator/db/fileref.hpp"
 #include "td/utils/overloaded.h"
@@ -201,19 +219,13 @@ void ArchiveImporter::got_new_materchain_state(td::Ref<MasterchainState> state) 
 }
 
 void ArchiveImporter::checked_all_masterchain_blocks(BlockSeqno seqno) {
-  if (shard_client_seqno_ > seqno) {
-    shard_client_seqno_ = seqno;
-  }
   check_next_shard_client_seqno(shard_client_seqno_ + 1);
 }
 
 void ArchiveImporter::check_next_shard_client_seqno(BlockSeqno seqno) {
   if (seqno > state_->get_seqno()) {
     finish_query();
-    return;
-  }
-
-  if (seqno == state_->get_seqno()) {
+  } else if (seqno == state_->get_seqno()) {
     got_masterchain_state(state_);
   } else {
     BlockIdExt b;
@@ -368,7 +380,8 @@ void ArchiveImporter::abort_query(td::Status error) {
 }
 void ArchiveImporter::finish_query() {
   if (promise_) {
-    promise_.set_value(std::vector<BlockSeqno>{state_->get_seqno(), shard_client_seqno_});
+    promise_.set_value(
+        std::vector<BlockSeqno>{state_->get_seqno(), std::min<BlockSeqno>(state_->get_seqno(), shard_client_seqno_)});
     td::unlink(path_).ensure();
   }
   stop();
