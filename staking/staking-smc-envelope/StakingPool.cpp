@@ -28,62 +28,35 @@
 #include <limits>
 
 namespace ton {
-    td::Ref<vm::Cell> StakingPool::get_init_state(const block::StdAddress  owner_address, td::int32 owner_fee, td::int32 min_stake
-                                                     ) noexcept {
+    td::Ref<vm::Cell> StakingPool::get_init_state(const td::uint32 transaction_fee, const td::uint32 min_stake, const td::uint32 owner_fee, const td::uint32 penalty_fee, const block::StdAddress owner_address) noexcept {
       auto code = get_init_code();
-      auto data = get_init_data(owner_address, owner_fee, min_stake);
+      auto data = get_init_data(transaction_fee, min_stake, owner_fee, penalty_fee, owner_address);
       return GenericAccount::get_init_state(std::move(code), std::move(data));
     }
 
-    td::Ref<vm::Cell> StakingPool::get_init_message(const std::vector<block::StdAddress> nominator_address) noexcept {
+    td::Ref<vm::Cell> StakingPool::get_init_message(const block::StdAddress pool_address, const std::vector<block::StdAddress> *nominator_address) noexcept {
       vm::Dictionary nominators(256);
 
-      for (size_t i = 0; i < nominator_address.size(); i++) {
-        auto key = nominator_address[i].addr;
+      for (size_t i = 0; i < nominator_address->size(); i++) {
+        auto key = (*nominator_address)[i].addr;
         vm::CellBuilder nominator_data;
         nominator_data.store_long(0, 8);
         block::tlb::t_Grams.store_integer_value(nominator_data, td::BigInt256(0));
         block::tlb::t_Grams.store_integer_value(nominator_data, td::BigInt256(0));
         nominators.set_builder(key.bits(), 256, nominator_data);
       }
+      auto nominator_code = StakingSmartContractCode::nominator();
 
       vm::CellBuilder cb;
+      cb.store_bits(pool_address.addr.bits(), 256);
       cb.ensure_throw(cb.store_maybe_ref(nominators.get_root_cell()));
+      cb.ensure_throw(cb.store_maybe_ref(nominator_code));
+
 
       return cb.finalize();
     }
 
-    td::Ref<vm::Cell> StakingPool::make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
-                                                          td::uint32 seqno, td::uint32 valid_until,
-                                                          td::Span<Gift> gifts) noexcept {
-      CHECK(gifts.size() <= 254);
-      vm::Dictionary messages(16);
-      for (size_t i = 0; i < gifts.size(); i++) {
-        auto& gift = gifts[i];
-        td::int32 send_mode = 3;
-        auto gramms = gift.gramms;
-        if (gramms == -1) {
-          gramms = 0;
-          send_mode += 128;
-        }
-        vm::CellBuilder cb;
-        GenericAccount::store_int_message(cb, gift.destination, gramms);
-        cb.store_bytes("\0\0\0\0", 4);
-        //vm::CellString::store(cb, gift.message, 35 * 8).ensure();
-        auto message_inner = cb.finalize();
-        cb = {};
-        cb.store_long(send_mode, 8).store_ref(message_inner);
-        auto key = messages.integer_key(td::make_refint(i), 16, false);
-        messages.set_builder(key.bits(), 16, cb);
-      }
 
-      vm::CellBuilder cb;
-      cb.store_long(wallet_id, 32).store_long(valid_until, 32).store_long(seqno, 32);
-      CHECK(cb.store_maybe_ref(messages.get_root_cell()));
-      auto message_outer = cb.finalize();
-      auto signature = private_key.sign(message_outer->get_hash().as_slice()).move_as_ok();
-      return vm::CellBuilder().store_bytes(signature).append_cellslice(vm::load_cell_slice(message_outer)).finalize();
-    }
 
     td::Ref<vm::Cell> StakingPool::get_init_code() noexcept {
       return StakingSmartContractCode::staking_pool();
@@ -98,13 +71,16 @@ namespace ton {
     }
 
 
-    td::Ref<vm::Cell> StakingPool::get_init_data( block::StdAddress owner_address, td::uint32 owner_fee, td::uint32 min_stake  ) noexcept {
+    td::Ref<vm::Cell> StakingPool::get_init_data( td::uint32 transaction_fee, td::uint32 min_stake, td::uint32 owner_fee, td::uint32 penalty_fee, block::StdAddress owner_address   ) noexcept {
       vm::Dictionary nominators(256);
 
       vm::CellBuilder config;
-      config.store_bits(owner_address.addr.bits() , 256);
-      config.store_long(owner_fee, 32);
+      block::tlb::t_Grams.store_integer_value(config, td::BigInt256(transaction_fee));
       block::tlb::t_Grams.store_integer_value(config, td::BigInt256(min_stake));
+      config.store_long(owner_fee, 32);
+      config.store_long(penalty_fee, 32);
+      config.store_bits(owner_address.addr.bits() , 256);
+      config.store_bits("" , 256);
       config.ensure_throw(config.store_maybe_ref(nominators.get_root_cell()));
 
       return vm::CellBuilder().store_long(0, 16).store_ref(config.finalize()).finalize();

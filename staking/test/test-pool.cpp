@@ -88,17 +88,18 @@ TEST(Smartcon, Simple) {
   LOG(INFO) << "SEQNO: " << seqno;
   ASSERT_EQ(1, seqno);
 
+
   auto pool_code = ton::StakingPool::get_init_code();
-  auto pool_data = ton::StakingPool::get_init_data(owner_address, 500, 777777);
+  LOG(INFO) << "POOL INIT CODE";
+  auto pool_data = ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_address );
   LOG(INFO) << "POOL INIT DATA: " << td::base64_encode(td::BufferSlice(vm::std_boc_serialize(pool_data).move_as_ok()).as_slice());
 
   auto pool = ton::StakingPool::create( pool_data  );
 
-
   std::vector<block::StdAddress> nominators;
 
-  auto init_state_nominator_1 = ton::Nominator::get_init_state(pool->get_address(0), 2);
-  auto init_state_nominator_2 = ton::Nominator::get_init_state(pool->get_address(0), 3);
+  auto init_state_nominator_1 = ton::Nominator::get_init_state(pool->get_address(0), 1);
+  auto init_state_nominator_2 = ton::Nominator::get_init_state(pool->get_address(0), 2);
 
 
 
@@ -111,7 +112,7 @@ TEST(Smartcon, Simple) {
   nominators.push_back(nominator_address_1);
   nominators.push_back(nominator_address_2);
 
-  auto pool_init_message = ton::StakingPool::get_init_message(nominators);
+  auto pool_init_message = ton::StakingPool::get_init_message(pool->get_address(0), &nominators);
   LOG(INFO) << "POOL INIT MESSAGE: " << td::base64_encode(td::BufferSlice(vm::std_boc_serialize(pool_init_message).move_as_ok()).as_slice());
 
   LOG(INFO) << "POOL INIT CODE / DATA SIZE: " << pool->code_size() << " " << pool->data_size();
@@ -151,7 +152,7 @@ TEST(Smartcon, Simple) {
 
   subscription = pool->get_subscription(2, 0);
   LOG(INFO) << "POOL : Subscription 2 address: " << subscription.address->to_hex_string(true) << " grams :" << subscription.grams;
-  ASSERT_EQ(11111111, subscription.grams);
+  ASSERT_EQ(11110111, subscription.grams);
 
   ans = pool.write().test_send_internal_message( ton::StakingPool::set_nominator_status_request(nominator_address_1, 1, 0), 100000, owner_address);
   // CHECK(ans.success);

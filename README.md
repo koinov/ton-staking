@@ -1,4 +1,4 @@
-# Staking pool for Telegram Open Network 
+# Staking pool for Telegram Open Network (adopted and managed by p2p.org)
 
 Fully decentralized solution based on mutual mistrust principle at the crossroad of blockchain, finance and security. 
 
@@ -214,14 +214,14 @@ Please excuse rather raw level of solution, but it was physically impossible for
 - [X] JSON RPC Server, that is written in C++ and built on top of TON stack, that fetches all the information from new smart contracts
 - [X] Simple web user interface, that interacts with JSON RPC server and shows all the information in the convenient way
 - [X] Subscription and redemption from any TON wallet, with or without QR codes
+- [X] Topping up smart contracts from owner or other wallets without issuing subscription
+- [X] Changing owner's fee within predefined limits
+- [X] Changing minimum subscription amount
+- [X] Changing owner ceremony
+- [X] Penalty for fast redemption
 
 ### TODO
 
-- [ ] Topping up smart contracts from owner or other wallets without issuing subscription
-- [ ] Changing owner's fee within predefined limits
-- [ ] Changing minimum subscription amount
-- [ ] Changing owner ceremony
-- [ ] Penalty for fast redemption
 - [ ] Handling redemption requests when pool smart contract doesn't have enough funds (nominators should return funds to pool in this case)
 - [ ] Add operator role, so stakes can be handled by third party
 - [ ] Support Multisig in console (to use multisig wallet as an owner wallet for better convenience)
@@ -335,7 +335,10 @@ Sincerely yours, Eugene Koinov
 [koinoff@gmail.com](mailto:koinoff@gmail.com)
 
 
-
+## Progress
+13-03-2020 Merge with the latest TON commit. Update to most recent tonlib. 
+14-03-2020 Transaction fee, penalty for fast redemption, owner changing ceremony, topping up contract 
+15-03-2020 Nominators addresses validation, transfer and withdrawal requests to nominators
 
 
 

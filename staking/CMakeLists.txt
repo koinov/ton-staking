@@ -24,12 +24,6 @@ set(POOL_TEST_SOURCE
   PARENT_SCOPE
 )
 
-add_library(staking-smc-envelope ${STAKING_SMC_ENVELOPE_SOURCE})
-target_include_directories(staking-smc-envelope PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
-target_link_libraries(staking-smc-envelope PUBLIC ton_crypto PRIVATE tdutils ton_block)
-if (NOT CMAKE_CROSSCOMPILING)
-  add_dependencies(smc-envelope staking-smc-envelope gen_staking_fif)
-endif()
 
 
 file(MAKE_DIRECTORY smartcont/auto)
@@ -69,6 +63,13 @@ if (NOT CMAKE_CROSSCOMPILING)
   GenFif(DEST smartcont/auto/staking-pool-code SOURCE smartcont/staking-pool-code.fc NAME staking-pool)
   GenFif(DEST smartcont/auto/nominator-code SOURCE smartcont/nominator-code.fc NAME nominator)
 
+endif()
+
+add_library(staking-smc-envelope ${STAKING_SMC_ENVELOPE_SOURCE})
+target_include_directories(staking-smc-envelope PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>)
+target_link_libraries(staking-smc-envelope PUBLIC ton_crypto PRIVATE tdutils ton_block)
+if (NOT CMAKE_CROSSCOMPILING)
+  add_dependencies(smc-envelope staking-smc-envelope gen_staking_fif)
 endif()
 
 

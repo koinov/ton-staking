@@ -30,19 +30,12 @@ namespace ton {
         explicit StakingPool(State state) :  ton::StakingSmartContract(std::move(state)) {
         }
         static constexpr unsigned max_message_size = vm::CellString::max_bytes;
-        static td::Ref<vm::Cell> get_init_state(const block::StdAddress  owner_address, td::int32 owner_fee, td::int32 min_stake) noexcept;
-        static td::Ref<vm::Cell> get_init_message(const std::vector<block::StdAddress> nominator_address) noexcept;
-        struct Gift {
-            block::StdAddress destination;
-            td::int64 gramms;
-            std::string message;
-        };
-        static td::Ref<vm::Cell> make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
-                                                     td::uint32 seqno, td::uint32 valid_until, td::Span<Gift> gifts) noexcept;
+        static td::Ref<vm::Cell> get_init_state(td::uint32 transaction_fee, td::uint32 min_stake, td::uint32 owner_fee, td::uint32 penalty_fee, block::StdAddress owner_address) noexcept;
+        static td::Ref<vm::Cell> get_init_message(const block::StdAddress pool_address, const std::vector<block::StdAddress> *nominator_address) noexcept;
 
         static td::Ref<vm::Cell> get_init_code() noexcept;
         static vm::CellHash get_init_code_hash() noexcept;
-        static td::Ref<vm::Cell> get_init_data(const block::StdAddress owner_address, td::uint32 onwer_pct, td::uint32 min_stake ) noexcept;
+        static td::Ref<vm::Cell> get_init_data(td::uint32 transaction_fee, td::uint32 min_stake, td::uint32 owner_fee, td::uint32 penalty_fee, block::StdAddress owner_address) noexcept;
         vm::CellHash get_data_hash() noexcept;
 
         td::Result<td::uint32> get_seqno() const;
