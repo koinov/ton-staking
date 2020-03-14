@@ -336,8 +336,11 @@ Sincerely yours, Eugene Koinov
 
 
 ## Progress
+
 13-03-2020 Merge with the latest TON commit. Update to most recent tonlib. 
+
 14-03-2020 Transaction fee, penalty for fast redemption, owner changing ceremony, topping up contract 
+
 15-03-2020 Nominators addresses validation, transfer and withdrawal requests to nominators
 
 
