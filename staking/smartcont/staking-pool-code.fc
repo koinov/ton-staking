@@ -545,12 +545,6 @@ int calculate_nominator_address(cell code, slice pool_addr, int idx) {
     return begin_cell().store_uint( cell_hash(nominator), 256).end_cell().begin_parse().preload_uint(256);
 }
 
-() exc(int a1, int a2) impure inline_ref {
-    dump_stack();
-    a1~dump();
-    a2~dump();
-    throw(97);
-}
 
 () try_init(slice in_msg) impure inline_ref {
   ;; first external query is accepted to setup initial phase
@@ -578,16 +572,11 @@ int calculate_nominator_address(cell code, slice pool_addr, int idx) {
       var hash = calculate_nominator_address(nominator_code, pool_address, nominator_idx);
       
       if(  hash != nominator_address ){
-        dump_stack();
-        hash~dump();
-        nominator_address~dump();
         nominators~udict_set_builder(256, nominator_address, pack_nominator(2, 0, 0, nominator_idx)); ;; invalid address
       }
     }
   } until( ~ s_found );
 
-  owner_fee~dump();
-  transaction_fee~dump();
   pool_config = pack_pool_config(transaction_fee, min_amount, owner_fee, penalty_fee,  owner, 0, nominators);
 
   var performance = new_dict();

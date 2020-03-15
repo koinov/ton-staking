@@ -222,6 +222,7 @@ Please excuse rather raw level of solution, but it was physically impossible for
 
 ### TODO
 
+- [ ] Add new nominator wallet
 - [ ] Handling redemption requests when pool smart contract doesn't have enough funds (nominators should return funds to pool in this case)
 - [ ] Add operator role, so stakes can be handled by third party
 - [ ] Support Multisig in console (to use multisig wallet as an owner wallet for better convenience)
