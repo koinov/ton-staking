@@ -43,6 +43,7 @@ namespace ton {
 
         struct Subscription {
             td::int32 id;
+            td::int32 wc;
             td::RefInt256 address;
             td::int64 grams;
             td::int16 start_period;

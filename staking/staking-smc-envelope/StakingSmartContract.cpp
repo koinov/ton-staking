@@ -25,6 +25,7 @@
 #include "vm/cellslice.h"
 #include "vm/cp0.h"
 #include "vm/continuation.h"
+#include "vm/debugops.h"
 
 #include "td/utils/crypto.h"
 
@@ -80,7 +81,8 @@ td::Ref<vm::Tuple> prepare_vm_c7() {
 StakingSmartContract::Answer run_smartcont(StakingSmartContract::State state, td::Ref<vm::Stack> stack, td::Ref<vm::Tuple> c7,
                                     vm::GasLimits gas, bool ignore_chksig) {
   auto gas_credit = gas.gas_credit;
-  vm::init_op_cp0();
+    vm::set_debug_enabled(true);
+    vm::init_op_cp0(true);
   vm::DictionaryBase::get_empty_dictionary();
 
   class Logger : public td::LogInterface {

@@ -172,7 +172,7 @@ int get_elector_addr() {
     var (src_wc, src_addr) = parse_std_addr(s_addr);
 
     var own_balance = get_balance();
-    balance = own_balance.first();
+    balance = own_balance.pair_first();
 
     throw_unless(40, ((src_wc == 0) & (src_addr == pool_address)) ); ;; pool address only
     s_addr~touch();
@@ -276,7 +276,7 @@ int get_elector_addr() {
   var pool_address = ds~load_uint(256);
   var wallet_id = ds~load_uint(32);
   var balance = get_balance();
-  var gram_balance = balance.first();
+  var gram_balance = balance.pair_first();
   set_data( pack_state(1, pool_address, wallet_id, 0, 0 ,gram_balance, 0 ) );
 }
 

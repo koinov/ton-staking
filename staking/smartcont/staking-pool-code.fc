@@ -39,33 +39,36 @@ cell pack_pool_config(transaction_fee, min_amount, owner_fee, penalty_fee, owner
 }
 
 
-builder pack_nominator(int status, int balance, int stake) inline_ref {
+builder pack_nominator(int status, int balance, int stake, int wallet_id) inline_ref {
   return( begin_cell()
       .store_uint(status, 8) ;; status
       .store_grams(balance) ;; balance
       .store_grams(stake) ;; at stake
+      .store_uint(wallet_id, 32) ;; status
+
   );
 }
 
 
-(int, int, int) unpack_nominator(slice cs) inline_ref {
-  (int status, int balance, int stake ) = (cs~load_uint(8), cs~load_grams(), cs~load_grams());
-  return (status, balance, stake);
+(int, int, int, int) unpack_nominator(slice cs) inline_ref {
+  (int status, int balance, int stake, int wallet_id ) = (cs~load_uint(8), cs~load_grams(), cs~load_grams(), cs~load_uint(32));
+  return (status, balance, stake, wallet_id);
 }
 
 
 
 
-(int, int, int, int, int  ) unpack_subscription(slice cs) inline_ref {
-  (int subscriber, int grams, int start_period, int end_period, int status) = (cs~load_uint(256), cs~load_grams(), cs~load_uint(16), cs~load_uint(16), cs~load_uint(8));
-  return (subscriber, grams, start_period, end_period, status);
+(int, int, int, int, int, int  ) unpack_subscription(slice cs) inline_ref {
+  (int subscriber, int subscriber_wc, int grams, int start_period, int end_period, int status) = (cs~load_uint(256), cs~load_int(8), cs~load_grams(), cs~load_uint(16), cs~load_uint(16), cs~load_uint(8));
+  return (subscriber, subscriber_wc, grams, start_period, end_period, status);
 }
 
 
-builder pack_subscription( int subscriber, int grams, int start_period, int end_period, int status ){
+builder pack_subscription( int subscriber, int subscriber_wc, int grams, int start_period, int end_period, int status ){
   return(
     begin_cell()
         .store_uint(subscriber, 256) ;; subscriber wallet address, 0 WC
+        .store_int(subscriber_wc, 8) ;; subscriber wallet address, 0 WC
         .store_grams(grams) ;; amount of grams
         .store_uint(start_period, 16) ;; start period
         .store_uint(end_period, 16) ;; end period
@@ -133,9 +136,9 @@ slice get_address_slice(int wc, int address){
 
   var (subscription, found) = subscriptions.udict_get?(32, subscription_id);
   throw_unless( 41, found); ;; no subscription found
-  (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
+  (int subscriber, int subscriber_wc, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
   throw_unless(42, status == 1 ); ;; not an active suscription
-  throw_unless(43, (src_wc == 0) & (src_addr == subscriber) ); ;; subscription doesn't belong to sender
+  throw_unless(43, (src_wc == subscriber_wc) & (src_addr == subscriber) ); ;; subscription doesn't belong to sender
 
   (var current_performance, found) = performance.udict_get?(16, current_period); ;; unpack current period
   throw_unless( 45, found);
@@ -145,7 +148,7 @@ slice get_address_slice(int wc, int address){
   throw_unless( 60, msg_value >= transaction_fee ); ;; do not allow to dry out the pool
 
 
-  if( start_period == current_period){ ;; redeem in current period
+  if( start_period == current_period){ ;; redeem in current period. penalty applied
       throw_unless( 57, aum >= grams );
       int penalty = grams * penalty_fee / 10000; ;; calculate fast redemption penalty
       send_message(s_addr, op, query_id, 0, grams - penalty , 64); ;; return subscription excludion fast redemption penalty
@@ -172,7 +175,7 @@ slice get_address_slice(int wc, int address){
 
   accept_message(); 
 
-  subscriptions~udict_set_builder(32, subscription_id, pack_subscription(subscriber, grams, start_period, end_period, status) );
+  subscriptions~udict_set_builder(32, subscription_id, pack_subscription(subscriber, subscriber_wc, grams, start_period, end_period, status) );
   performance~udict_set_builder(16, current_period, pack_performance(rate, aum, units, deposits, withdrawals ));
   set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers) );
 
@@ -185,22 +188,25 @@ slice get_address_slice(int wc, int address){
   throw_unless( 60, msg_value >= transaction_fee ); ;; do not allow to dry out the pool
 
   var (src_wc, src_addr) = parse_std_addr(s_addr);
+
+  var subscriber_hash = cell_hash( begin_cell().store_uint(src_wc,8).store_uint(src_addr, 256).end_cell() );
+
   if( (src_wc == 0) & (src_addr == owner) ){
     return ();
   }
   int last_idx = (1 << 31) + ((1 << 31) - 1);
   cell subscriber = new_dict();
   accept_message();
-  var (s_subscriber, found) = subscribers.udict_get?(256, src_addr);
+  var (s_subscriber, found) = subscribers.idict_get?(257, subscriber_hash);
   int subscription_idx = 0;
   if( found ){ ;; check if there's a subscription for this address in current period
     subscriber = s_subscriber~load_dict(); ;; load subscriptions of the sender
     var (subscription_period, last_subscription, user_subscription_found) = subscriber.udict_get_prev?(32, last_idx);
     if( user_subscription_found & ( subscription_period == current_period )  ){ ;; subscription is the current one, add grams 
       var subscription_idx = last_subscription.preload_uint(32);
-      (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( last_subscription );
+      (_, _, int grams, int start_period, int end_period, int status) = unpack_subscription( last_subscription );
       grams += msg_value - transaction_fee; ;; add grams 
-      subscriptions~udict_set_builder(32, subscription_idx, pack_subscription(subscriber, grams, start_period, end_period, status) ); ;; change subscription entry only 
+      subscriptions~udict_set_builder(32, subscription_idx, pack_subscription(src_addr, src_wc, grams, start_period, end_period, status) ); ;; change subscription entry only 
     }
   }
   if( subscription_idx == 0 ){ ;; new subscription required
@@ -210,8 +216,8 @@ slice get_address_slice(int wc, int address){
     }
     subscription_idx += 1;
     subscriber~udict_set_builder(16, current_period, pack_subscribers_entry(last_subscription_idx) ); ;; create new subscription for subscriber
-    subscribers~udict_set_builder(256, src_addr, begin_cell().store_dict(subscriber)); ;; save subscribers data 
-    subscriptions~udict_set_builder(32, subscription_idx, pack_subscription( src_addr, msg_value - transaction_fee, current_period, 0, 1) ); ;; create new subscription 
+    subscribers~idict_set_builder(257, subscriber_hash, begin_cell().store_dict(subscriber)); ;; save subscribers data 
+    subscriptions~udict_set_builder(32, subscription_idx, pack_subscription( src_addr, src_wc, msg_value - transaction_fee, current_period, 0, 1) ); ;; create new subscription 
   }
   var (performance_s, f) = performance.udict_get?(16, current_period);
   (int rate, int aum, int units, int deposits, int withdrawals) = unpack_performance( performance_s );
@@ -259,12 +265,15 @@ slice get_address_slice(int wc, int address){
       owners_share = (((managed_units * new_rate) - (managed_units * prev_rate)) * owner_fee ) / 10000; ;; calculate incentive fee
       owners_units = owners_share / new_rate; ;; calculate units belongin to owner 
 
-      var (s_subscriber, found) = subscribers.udict_get?(256, src_addr); ;; find owner's subscriptions
+      var subscriber_hash = cell_hash( begin_cell().store_uint(src_wc,8).store_uint(src_addr, 256).end_cell() );
+
+
+      var (s_subscriber, found) = subscribers.idict_get?(257, subscriber_hash); ;; find owner's subscriptions
       var subscriber = s_subscriber~load_dict();
       var (subscription_idx, subscription, s_found ) = subscriptions.udict_get_prev?(32, last_idx); ;; get last subscription index
 
       subscriber~udict_set_builder(16, current_period + 1, pack_subscribers_entry(subscription_idx)); ;; create subscription for the owner in new period
-      subscriptions~udict_set_builder(32, subscription_idx + 1, pack_subscription(owner, owners_share, current_period, 0, 1) ); ;; add new owner's subscription
+      subscriptions~udict_set_builder(32, subscription_idx + 1, pack_subscription(src_addr, src_wc, owners_share, current_period, 0, 1) ); ;; add new owner's subscription
 
   }
 
@@ -287,11 +296,11 @@ slice get_address_slice(int wc, int address){
   throw_unless( 50, ((src_wc == 0) & (src_addr == owner )) ); ;; owner only
   var (nominator_s, found)  = nominators.udict_get?(256, wallet_id);
   throw_unless(51, found);
-  var (status, balance, stake) = unpack_nominator( nominator_s );
+  var (status, balance, stake, wallet_id) = unpack_nominator( nominator_s );
   throw_if(78, status == 2);
   throw_if(52, status == new_status);
   accept_message();
-  nominators~udict_set_builder(256, wallet_id, pack_nominator(new_status, balance, stake));
+  nominators~udict_set_builder(256, wallet_id, pack_nominator(new_status, balance, stake, wallet_id));
   pool_config = pack_pool_config(transaction_fee, min_amount, owner_fee, penalty_fee,  owner, pending_owner, nominators);
   set_data( pack_state(current_period, pool_config, performance, subscriptions, subscribers)  );
   return ();
@@ -317,7 +326,7 @@ slice get_address_slice(int wc, int address){
   do {
     (address_idx, var nominator, found) = nominators.udict_get_next?(256, address_idx);
     if( found ){
-      var (status, _, _) = unpack_nominator(nominator);
+      var (status, _, _, _) = unpack_nominator(nominator);
       if( status == 1){
         send_message( get_address_slice(-1, address_idx), 0x42435446, 1, 0, 1000000, 64 ); ;; BCFT
       }
@@ -343,8 +352,8 @@ slice get_address_slice(int wc, int address){
 
   accept_message();
 
-  var (status, _, _) = unpack_nominator(nominator);
-  nominators~udict_set_builder(256, src_addr, pack_nominator(status, balance, stake) );
+  var (status, _, _, wallet_id) = unpack_nominator(nominator);
+  nominators~udict_set_builder(256, src_addr, pack_nominator(status, balance, stake, wallet_id) );
   pool_config = pack_pool_config(transaction_fee, min_amount, owner_fee, penalty_fee,  owner, pending_owner, nominators);
 
   var (performance_s, found) = performance.udict_get?(16, current_period);
@@ -422,7 +431,7 @@ slice get_address_slice(int wc, int address){
 
   accept_message();
 
-  var (status, _, _) = unpack_nominator(nominator);
+  var (status, _, _, _) = unpack_nominator(nominator);
   if( status == 1){ ;; nominator is valid and active
         send_message( get_address_slice(-1, nominator_address), 0x0, 1, 0, grams, 64 ); ;; 0 - simple transfer
   }
@@ -442,11 +451,11 @@ slice get_address_slice(int wc, int address){
   throw_unless( 50, ((src_wc == 0) & (src_addr == owner )) ); ;; owner only
   
   var (nominator, found) = nominators.udict_get?(256, nominator_address);
-  throw_unless( 50, ~ found ); ;; nominator found
+  throw_unless( 51, ~ found ); ;; nominator found
 
   accept_message();
 
-  var (status, _, _) = unpack_nominator(nominator);
+  var (status, _, _, _) = unpack_nominator(nominator);
   if( status == 1){ ;; nominator is valid and active
         send_message( get_address_slice(-1, nominator_address), 0x52445457, 1, 0, grams, 64 ); ;; WTDR - withdraw request
   }
@@ -504,7 +513,7 @@ int decode_text(slice in_msg){
         int grams = in_msg~load_grams();
         return process_transfer_to_wallet(s_addr, query_id, msg_value, wallet_address, grams);
     }
-    if( op == 0x52445457 ) { ;; WTDR transfer funds to nominator
+    if( op == 0x52445457 ) { ;; WTDR withdraw funds from nominator
         int wallet_address = in_msg~load_uint(256);
         int grams = in_msg~load_grams();
         return process_withdraw_from_wallet(s_addr, query_id, msg_value, wallet_address, grams);
@@ -533,10 +542,15 @@ int decode_text(slice in_msg){
 int calculate_nominator_address(cell code, slice pool_addr, int idx) {
     cell init_state = begin_cell().store_uint(0,1).store_slice(pool_addr).store_uint(idx, 32).store_uint(0, 32).store_grams(0).store_grams(0).store_grams(0).end_cell();
     cell nominator = begin_cell().store_uint(0, 2).store_uint(3, 2).store_uint(0, 1).store_ref(code).store_ref(init_state).end_cell();
-    return cell_hash(nominator);
+    return begin_cell().store_uint( cell_hash(nominator), 256).end_cell().begin_parse().preload_uint(256);
 }
 
-
+() exc(int a1, int a2) impure inline_ref {
+    dump_stack();
+    a1~dump();
+    a2~dump();
+    throw(97);
+}
 
 () try_init(slice in_msg) impure inline_ref {
   ;; first external query is accepted to setup initial phase
@@ -557,16 +571,19 @@ int calculate_nominator_address(cell code, slice pool_addr, int idx) {
 
   var s_found = 0;
   var nominator_address = 0;
-  var nominator_idx = 1;
-  do {
-    (nominator_address, _, s_found ) = nominators.udict_get_next?(256, nominator_address); ;; get next subscription from index
+  do { ;; making sure all submitted addresses are legit nominator contracts
+    (nominator_address, var nominator, s_found ) = nominators.udict_get_next?(256, nominator_address); ;; get next nominator address from init message
     if( s_found ){
-      if( calculate_nominator_address(nominator_code, pool_address, nominator_idx) != nominator_address ){
+      (_, _, _, var nominator_idx) = unpack_nominator(nominator);
+      var hash = calculate_nominator_address(nominator_code, pool_address, nominator_idx);
+      
+      if(  hash != nominator_address ){
         dump_stack();
-        nominators~udict_set_builder(256, nominator_address, pack_nominator(2, 0, 0));
-      } 
+        hash~dump();
+        nominator_address~dump();
+        nominators~udict_set_builder(256, nominator_address, pack_nominator(2, 0, 0, nominator_idx)); ;; invalid address
+      }
     }
-    nominator_idx += 1;
   } until( ~ s_found );
 
   owner_fee~dump();
@@ -582,10 +599,12 @@ int calculate_nominator_address(cell code, slice pool_addr, int idx) {
   var subscribers = new_dict();
   var subscriber = new_dict();
 
+  ;;var subscriber_hash = begin_cell().store_uint(cell_hash( begin_cell().store_uint(0,8).store_uint(owner, 256).end_cell() ), 256 ).end_cell().begin_parse().preload_uint(256);
+  var subscriber_hash = cell_hash( begin_cell().store_int(0,8).store_uint(owner, 256).end_cell());
 
   subscriber~udict_set_builder(16, current_period, pack_subscribers_entry(1)); ;; store new non-withdrawable subsciption index for the owner
-  subscribers~udict_set_builder(256, owner, begin_cell().store_dict(subscriber) ); ;; create subscriber entry for the owner
-  subscriptions~udict_set_builder(32, 1, pack_subscription(owner, gram_balance, current_period, 0, 1) ); ;; store new subscription
+  subscribers~idict_set_builder(257, subscriber_hash, begin_cell().store_dict(subscriber) ); ;; create subscriber entry for the owner
+  subscriptions~udict_set_builder(32, 1, pack_subscription(owner, 0, gram_balance, current_period, 0, 1) ); ;; store new subscription
 
   current_period += 1; ;; create new period for incoming subscriptions
   performance~udict_set_builder(16, current_period, pack_performance(0, gram_balance, gram_balance / 10000, 0, 0) ); ;; Initialize performance
@@ -636,7 +655,7 @@ int get_subscriptions_count() method_id {
   return 0;
 }
 
-(int, int, int, int, int, int) get_subscription(int subscription_id, int direction) method_id {
+(int, int, int, int, int, int, int) get_subscription(int subscription_id, int direction) method_id {
   (_, _, _ , var subscriptions, _ ) = unpack_state();
   int s_found = 0;
   slice subscription = null();
@@ -651,14 +670,14 @@ int get_subscriptions_count() method_id {
   }
 
   if( s_found ){
-      (int subscriber, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
-      return( subscription_id, subscriber, grams, start_period, end_period, status);
+      (int subscriber, int subsctiber_wc, int grams, int start_period, int end_period, int status) = unpack_subscription( subscription );
+      return( subscription_id, subsctiber_wc, subscriber, grams, start_period, end_period, status);
   }
-  return ( 0,0,0,0,0,0);
+  return ( 0,0,0,0,0,0,0);
 }
 
 
-(int, int, int, int ) get_nominator(int nominator_address, int direction) method_id {
+(int, int, int, int, int ) get_nominator(int nominator_address, int direction) method_id {
   (_, var pool_config, _ , _ , _ ) = unpack_state();
   int s_found = 0;
   slice nominator = null();
@@ -675,10 +694,10 @@ int get_subscriptions_count() method_id {
   }
 
   if( s_found ){
-      (int status, int balance, int stake) = unpack_nominator( nominator );
-      return( nominator_address, status, balance, stake);
+      (int status, int balance, int stake, int wallet_id) = unpack_nominator( nominator );
+      return( nominator_address, status, balance, stake, wallet_id);
   }
-  return (0,0,0,0 );
+  return (0,0,0,0,0 );
 }
 
 (int, int, int, int, int, int ) get_performance(int period, int direction) method_id {
@@ -703,12 +722,15 @@ int get_subscriptions_count() method_id {
   return (0, 0, 0, 0, 0, 0 );
 }
 
-(int, int) get_subscribers_subscription(int subscriber_address, int period, int direction) method_id {
+(int, int) get_subscribers_subscription(int subscribers_wc, int subscriber_address, int period, int direction) method_id {
   (_, _, _ , _ , var subscribers ) = unpack_state();
   int s_found = 0;
   slice subscriber_entry_s = null();
 
-  var (subscriber_s, s_found) = subscribers.udict_get?(256, subscriber_address);
+  var subscriber_hash = cell_hash( begin_cell().store_int(subscribers_wc,8).store_uint(subscriber_address, 256).end_cell() );
+
+
+  var (subscriber_s, s_found) = subscribers.idict_get?(257, subscriber_hash);
   if( ~ s_found ){
     return (0, 0);
   }
@@ -733,14 +755,17 @@ int get_subscriptions_count() method_id {
   return (0, 0 );
 }
 
-_ get_subscribers_subscriptions(int subscriber_address) method_id {
+_ get_subscribers_subscriptions(int subscriber_wc, int subscriber_address) method_id {
   (_, _, _ , _ , var subscribers ) = unpack_state();
   int s_found = 0;
   slice subscriber_entry_s = null();
   var res = nil;
   var period = 0;
 
-  var (subscriber_s, s_found) = subscribers.udict_get?(256, subscriber_address);
+  var subscriber_hash = cell_hash( begin_cell().store_int(subscriber_wc,8).store_uint(subscriber_address, 256).end_cell() );
+
+
+  var (subscriber_s, s_found) = subscribers.idict_get?(257, subscriber_hash);
 
   if( ~ s_found ){
     return res;

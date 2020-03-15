@@ -26,6 +26,7 @@ PROGRAM{
   DECLPROC decode_text
   DECLPROC recv_internal
   DECLPROC calculate_nominator_address
+  DECLPROC exc
   DECLPROC try_init
   DECLPROC recv_external
   80293 DECLMETHOD get_owner
@@ -88,41 +89,46 @@ PROGRAM{
     ENDC	//  _19
   }>
   pack_nominator PROCREF:<{
-    //  status balance stake
-    s0 s2 XCHG
-    NEWC	//  stake balance status _3
-    8 STU	//  stake balance _5
-    SWAP	//  stake _5 balance
-    STGRAMS	//  stake _6
-    SWAP	//  _6 stake
-    STGRAMS	//  _7
+    //  status balance stake wallet_id
+    s0 s3 XCHG
+    NEWC	//  wallet_id balance stake status _4
+    8 STU	//  wallet_id balance stake _6
+    ROT	//  wallet_id stake _6 balance
+    STGRAMS	//  wallet_id stake _7
+    SWAP	//  wallet_id _7 stake
+    STGRAMS	//  wallet_id _8
+    32 STU	//  _10
   }>
   unpack_nominator PROCREF:<{
     //  cs
-    8 LDU	//  _4 cs
-    LDGRAMS	//  _4 _7 cs
-    LDGRAMS	//  _4 _7 _16 _15
-    DROP	//  status balance stake
+    8 LDU	//  _5 cs
+    LDGRAMS	//  _5 _8 cs
+    LDGRAMS	//  _5 _8 _10 cs
+    32 LDU	//  _5 _8 _10 _22 _21
+    DROP	//  status balance stake wallet_id
   }>
   unpack_subscription PROCREF:<{
     //  cs
-    256 LDU	//  _6 cs
-    LDGRAMS	//  _6 _9 cs
-    16 LDU	//  _6 _9 _11 cs
-    16 LDU	//  _6 _9 _11 _14 cs
-    8 LDU	//  _6 _9 _11 _14 _29 _28
-    DROP	//  subscriber grams start_period end_period status
+    256 LDU	//  _7 cs
+    8 LDI	//  _7 _10 cs
+    LDGRAMS	//  _7 _10 _13 cs
+    16 LDU	//  _7 _10 _13 _15 cs
+    16 LDU	//  _7 _10 _13 _15 _18 cs
+    8 LDU	//  _7 _10 _13 _15 _18 _35 _34
+    DROP	//  subscriber subscriber_wc grams start_period end_period status
   }>
   pack_subscription PROC:<{
-    //  subscriber grams start_period end_period status
-    s0 s4 XCHG
-    NEWC	//  status grams start_period end_period subscriber _5
-    256 STU	//  status grams start_period end_period _7
-    s0 s3 XCHG2	//  status end_period start_period _7 grams
-    STGRAMS	//  status end_period start_period _8
-    16 STU	//  status end_period _10
-    16 STU	//  status _12
-    8 STU	//  _14
+    //  subscriber subscriber_wc grams start_period end_period status
+    s0 s5 XCHG
+    NEWC	//  status subscriber_wc grams start_period end_period subscriber _6
+    256 STU	//  status subscriber_wc grams start_period end_period _8
+    s1 s4 XCHG	//  status end_period grams start_period subscriber_wc _8
+    8 STI	//  status end_period grams start_period _10
+    ROT	//  status end_period start_period _10 grams
+    STGRAMS	//  status end_period start_period _11
+    16 STU	//  status end_period _13
+    16 STU	//  status _15
+    8 STU	//  _17
   }>
   unpack_performance PROCREF:<{
     //  cs
@@ -205,126 +211,127 @@ PROGRAM{
     DICTUGET
     NULLSWAPIFNOT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers src_wc src_addr subscription found
     41 THROWIFNOT
-    unpack_subscription INLINECALLDICT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers src_wc src_addr subscriber grams start_period end_period status
-    1 EQINT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers src_wc src_addr subscriber grams start_period end_period _29
+    unpack_subscription INLINECALLDICT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers src_wc src_addr subscriber subscriber_wc grams start_period end_period status
+    1 EQINT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers src_wc src_addr subscriber subscriber_wc grams start_period end_period _30
     42 THROWIFNOT
-    s0 s5 XCHG	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period src_addr subscriber grams start_period src_wc
-    0 EQINT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period src_addr subscriber grams start_period _33
-    s4 s3 XCPU	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period _33 subscriber grams start_period src_addr subscriber
-    EQUAL	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period _33 subscriber grams start_period _34
-    s1 s4 XCHG	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams _33 _34
-    AND	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams _35
+    s6 s3 XCPU	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period src_addr subscriber subscriber_wc grams start_period src_wc subscriber_wc
+    EQUAL	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period src_addr subscriber subscriber_wc grams start_period _33
+    s5 s4 XCPU	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period _33 subscriber subscriber_wc grams start_period src_addr subscriber
+    EQUAL	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period _33 subscriber subscriber_wc grams start_period _34
+    s1 s5 XCHG	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams _33 _34
+    AND	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams _35
     43 THROWIFNOT
-    s8 s6 PUSH2
-    16 PUSHINT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams current_period performance _38=16
+    s9 s7 PUSH2
+    16 PUSHINT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams current_period performance _38=16
     DICTUGET
-    NULLSWAPIFNOT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams current_performance found
+    NULLSWAPIFNOT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams current_performance found
     45 THROWIFNOT
-    unpack_performance INLINECALLDICT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals
-    s12 PUSH	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals pool_config
-    CTOS	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals _55
-    unpack_pool_config INLINECALLDICT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals _146 _147 _148 _149 _150 _151 _152
+    unpack_performance INLINECALLDICT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals
+    s13 PUSH	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals pool_config
+    CTOS	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals _55
+    unpack_pool_config INLINECALLDICT	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals _147 _148 _149 _150 _151 _152 _153
     2DROP
-    2 2 BLKDROP2	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals transaction_fee penalty_fee owner
-    s1 19 s() XCHG
-    s0 s2 XCHG	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner msg_value transaction_fee
-    GEQ	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner _58
+    2 2 BLKDROP2	//  s_addr query_id msg_value subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals transaction_fee penalty_fee owner
+    s1 20 s() XCHG
+    s0 s2 XCHG	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner msg_value transaction_fee
+    GEQ	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner _58
     60 THROWIFNOT
-    s8 s14 PUSH2	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner start_period current_period
-    EQUAL	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner _60
-    IF:<{	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner
-      s4 s6 PUSH2	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner aum grams
-      GEQ	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner _62
+    s9 s15 PUSH2	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner start_period current_period
+    EQUAL	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner _60
+    IF:<{	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner
+      s4 s6 PUSH2	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner aum grams
+      GEQ	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner _62
       57 THROWIFNOT
       s6 s(-1) PUXC
-      s0 18 s() XCHG	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals grams penalty_fee
-      MUL	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals _65
-      10000 PUSHINT	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals _65 _66=10000
-      DIV	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals penalty
-      0 PUSHINT	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals penalty _68=0
-      s7 s1 PUSH2	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals penalty _68=0 grams penalty
-      SUB	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals penalty _68=0 _69
-      s2 21 s() XCHG
-      17 s() PUSH
+      s0 19 s() XCHG	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals grams penalty_fee
+      MUL	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals _65
+      10000 PUSHINT	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals _65 _66=10000
+      DIV	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals penalty
+      0 PUSHINT	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals penalty _68=0
+      s7 s1 PUSH2	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals penalty _68=0 grams penalty
+      SUB	//  s_addr query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals penalty _68=0 _69
+      s2 22 s() XCHG
+      18 s() PUSH
       s0 s2 XCHG
-      21 s() PUSH
+      22 s() PUSH
       s0 s2 XCHG
-      64 PUSHINT	//  penalty query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals s_addr op=1296319826 query_id _68=0 _69 _70=64
+      64 PUSHINT	//  penalty query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals s_addr op=1296319826 query_id _68=0 _69 _70=64
       send_message CALLDICT
-      0 PUSHINT	//  penalty query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals _72=0
+      0 PUSHINT	//  penalty query_id owner subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals _72=0
       SWAP
-      s0 17 s() XCHG	//  penalty query_id withdrawals subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits _72=0 owner
-      get_address_slice CALLDICT	//  penalty query_id withdrawals subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits _73
-      s14 s1 s3 XCHG3
-      s1 17 s() XCHG
+      s0 18 s() XCHG	//  penalty query_id withdrawals subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits _72=0 owner
+      get_address_slice CALLDICT	//  penalty query_id withdrawals subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits _73
+      s15 s1 s3 XCHG3
+      s1 18 s() XCHG
       0 PUSHINT
       SWAP
-      s0 19 s() XCHG
-      64 PUSHINT	//  aum deposits withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate _73 op=1296319826 query_id _74=0 penalty _75=64
+      s0 20 s() XCHG
+      64 PUSHINT	//  aum deposits withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate _73 op=1296319826 query_id _74=0 penalty _75=64
       send_message CALLDICT
-      s13 s1 XCPU	//  aum rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams deposits grams
-      SUB	//  aum rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams deposits
-      s14 s14 XCHG2	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber aum grams
-      SUB	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber aum
-      0 PUSHINT	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber aum grams=0
-      DUP	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber aum grams=0 status=0
-    }>ELSE<{	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber grams rate aum units deposits withdrawals owner
+      s14 s1 XCPU	//  aum rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams deposits grams
+      SUB	//  aum rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams deposits
+      s15 s15 XCHG2	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc aum grams
+      SUB	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc aum
+      0 PUSHINT	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc aum grams=0
+      DUP	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc aum grams=0 status=0
+    }>ELSE<{	//  s_addr query_id penalty_fee subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc grams rate aum units deposits withdrawals owner
       DROP
-      s8 POP
-      s15 POP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units
-      s5 s9 PUSH2
-      16 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_period performance _83=16
+      s9 POP
+      16 s() POP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units
+      s6 s10 PUSH2
+      16 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_period performance _83=16
       DICTUGET
-      NULLSWAPIFNOT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_performance found
+      NULLSWAPIFNOT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_performance found
       43 THROWIFNOT
-      s12 PUSH	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_performance current_period
-      DEC	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_performance _89
-      s11 PUSH
-      16 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_performance _89 performance _90=16
+      s13 PUSH	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_performance current_period
+      DEC	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_performance _89
+      s12 PUSH
+      16 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_performance _89 performance _90=16
       DICTUGET
-      NULLSWAPIFNOT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_performance end_performance found
+      NULLSWAPIFNOT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_performance end_performance found
       44 THROWIFNOT
-      SWAP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units end_performance start_performance
-      LDGRAMS	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units end_performance _158 _157
-      DROP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units end_performance start_rate
-      SWAP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_rate end_performance
-      LDGRAMS	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_rate _160 _159
-      DROP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_rate end_rate
-      s5 s1 PUSH2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_rate end_rate grams start_rate
-      DIV	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber grams rate aum units start_rate end_rate _100
-      s1 s9 XCHG	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals _100
-      ADD	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals
-      s3 s5 PUSH2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals aum grams
-      GEQ	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals _103
+      SWAP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units end_performance start_performance
+      LDGRAMS	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units end_performance _159 _158
+      DROP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units end_performance start_rate
+      SWAP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_rate end_performance
+      LDGRAMS	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_rate _161 _160
+      DROP	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_rate end_rate
+      s5 s1 PUSH2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_rate end_rate grams start_rate
+      DIV	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers withdrawals start_period subscriber subscriber_wc grams rate aum units start_rate end_rate _100
+      s1 s10 XCHG	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals _100
+      ADD	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals
+      s3 s5 PUSH2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals aum grams
+      GEQ	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals _103
       57 THROWIFNOT
-      s8 s5 PUSH2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals end_rate grams
-      MUL	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals _105
-      s2 PUSH	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals _105 start_rate
-      DIV	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate aum units start_rate withdrawals _106
-      s1 s4 XCHG	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate withdrawals units start_rate aum _106
-      SUB	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate withdrawals units start_rate aum
-      2 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate withdrawals units start_rate aum status=2
-      s14 PUSH	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate withdrawals units start_rate aum status=2 end_period
-      0 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber grams rate withdrawals units start_rate aum status=2 end_period _109=0
-      s11 s8 XCPU	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber grams rate withdrawals units start_rate aum status=2 end_period end_rate grams
-      MUL	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber grams rate withdrawals units start_rate aum status=2 end_period _110
-      s0 s4 XCHG2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber grams rate withdrawals units end_period aum status=2 _110 start_rate
-      DIV	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber grams rate withdrawals units end_period aum status=2 _111
-      s4 20 s() XCHG
-      s3 16 s() XCHG
-      s2 19 s() XCHG
-      s1 s10 XCHG
-      64 PUSHINT	//  units aum deposits subscription_id end_period current_period pool_config performance subscriptions subscribers status=2 start_period subscriber grams rate withdrawals s_addr op=1296319826 query_id _109=0 _111 _112=64
+      s9 s5 PUSH2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals end_rate grams
+      MUL	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals _105
+      s2 PUSH	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals _105 start_rate
+      DIV	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate aum units start_rate withdrawals _106
+      s1 s4 XCHG	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum _106
+      SUB	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum
+      2 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum status=2
+      s15 PUSH	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum status=2 end_period
+      0 PUSHINT	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers end_rate start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum status=2 end_period _109=0
+      s12 s8 XCPU	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum status=2 end_period end_rate grams
+      MUL	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber subscriber_wc grams rate withdrawals units start_rate aum status=2 end_period _110
+      s0 s4 XCHG2	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber subscriber_wc grams rate withdrawals units end_period aum status=2 _110 start_rate
+      DIV	//  s_addr query_id deposits subscription_id op=1296319826 current_period pool_config performance subscriptions subscribers _109=0 start_period subscriber subscriber_wc grams rate withdrawals units end_period aum status=2 _111
+      s4 21 s() XCHG
+      s3 17 s() XCHG
+      s2 20 s() XCHG
+      s1 s11 XCHG
+      64 PUSHINT	//  units aum deposits subscription_id end_period current_period pool_config performance subscriptions subscribers status=2 start_period subscriber subscriber_wc grams rate withdrawals s_addr op=1296319826 query_id _109=0 _111 _112=64
       send_message CALLDICT
-      s0 s13 XCHG
-      s0 s15 XCHG
-      s0 s11 XCHG
-      s14 s14 s5 XCHG3	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber aum grams status
+      s0 s14 XCHG
+      s0 16 s() XCHG
+      s0 s12 XCHG
+      s15 s15 s6 XCHG3	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers end_period start_period subscriber subscriber_wc aum grams status
     }>
     ACCEPT
+    s4 s5 XCHG
     s1 s3 XCHG
     s4 s4 s0 XCHG3
-    s1 s5 XCHG	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers aum subscriber grams start_period end_period status
+    s1 s6 XCHG	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers aum subscriber subscriber_wc grams start_period end_period status
     pack_subscription CALLDICT	//  deposits rate withdrawals subscription_id units current_period pool_config performance subscriptions subscribers aum _116
     s0 s8 s3 XCHG3
     32 PUSHINT	//  deposits rate withdrawals aum units current_period pool_config performance subscribers _116 subscription_id subscriptions _117=32
@@ -347,7 +354,7 @@ PROGRAM{
     unpack_state INLINECALLDICT	//  s_addr msg_value current_period pool_config performance subscriptions subscribers
     s3 PUSH	//  s_addr msg_value current_period pool_config performance subscriptions subscribers pool_config
     CTOS	//  s_addr msg_value current_period pool_config performance subscriptions subscribers _16
-    unpack_pool_config INLINECALLDICT	//  s_addr msg_value current_period pool_config performance subscriptions subscribers _119 _120 _121 _122 _123 _124 _125
+    unpack_pool_config INLINECALLDICT	//  s_addr msg_value current_period pool_config performance subscriptions subscribers _128 _129 _130 _131 _132 _133 _134
     s2 s5 XCHG
     5 BLKDROP	//  s_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee owner
     s7 s1 PUSH2	//  s_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee owner msg_value transaction_fee
@@ -355,106 +362,119 @@ PROGRAM{
     60 THROWIFNOT
     s0 s8 XCHG	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee s_addr
     REWRITESTDADDR	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr
-    SWAP	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_addr src_wc
-    0 EQINT	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_addr _25
-    s1 s9 PUXC	//  _25 msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_addr src_addr owner
-    EQUAL	//  _25 msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_addr _26
-    s1 s9 XCHG	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee _25 _26
-    AND	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee _27
-    IFJMP:<{	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee
-      8 BLKDROP	// 
-    }>	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee
-    32 PUSHPOW2DEC	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx
-    NEWDICT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber
+    OVER
+    NEWC	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr src_wc _25
+    8 STU	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr _27
+    s1 s(-1) PUXC	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr src_addr _27
+    256 STU	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr _29
+    ENDC	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr _30
+    HASHCU	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscriber_hash
+    s2 PUSH	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscriber_hash src_wc
+    0 EQINT	//  owner msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscriber_hash _33
+    s2 s11 PUXC	//  _33 msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscriber_hash src_addr owner
+    EQUAL	//  _33 msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscriber_hash _34
+    s1 s11 XCHG	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr _33 _34
+    AND	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr _35
+    IFJMP:<{	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr
+      10 BLKDROP	// 
+    }>	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr
+    32 PUSHPOW2DEC	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx
+    NEWDICT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber
     ACCEPT
-    s9 s3 PUSH2
-    8 PUSHPOW2	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber src_addr subscribers _43=256
-    DICTUGET
-    NULLSWAPIFNOT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber s_subscriber found
-    0 PUSHINT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber s_subscriber found subscription_idx=0
-    SWAP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber s_subscriber subscription_idx=0 found
-    IF:<{	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber s_subscriber subscription_idx=0
-      s2 POP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 s_subscriber
-      LDDICT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 _131 _130
-      DROP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber
+    s11 s5 PUSH2
+    257 PUSHINT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber subscriber_hash subscribers _51=257
+    DICTIGET
+    NULLSWAPIFNOT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber s_subscriber found
+    0 PUSHINT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber s_subscriber found subscription_idx=0
+    SWAP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber s_subscriber subscription_idx=0 found
+    IF:<{	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber s_subscriber subscription_idx=0
+      s2 POP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 s_subscriber
+      LDDICT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 _140 _139
+      DROP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber
       s2 s0 PUSH2
-      32 PUSHINT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_idx subscriber _52=32
+      32 PUSHINT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_idx subscriber _60=32
       DICTUGETPREV
-      NULLSWAPIFNOT2	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription subscription_period user_subscription_found
-      s1 s11 XCPU	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription user_subscription_found subscription_period current_period
-      EQUAL	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription user_subscription_found _54
-      AND	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription _55
-      IF:<{	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription
-        DUP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription last_subscription
-        32 PLDU	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber last_subscription subscription_idx
-        SWAP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx last_subscription
-        unpack_subscription INLINECALLDICT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx subscriber grams start_period end_period status
-        s15 s9 PUSH2	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx subscriber grams start_period end_period status msg_value transaction_fee
-        SUB	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx subscriber grams start_period end_period status _65
-        s1 s4 XCHG	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx subscriber status start_period end_period grams _65
-        ADD	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx subscriber status start_period end_period grams
-        s0 s3 XCHG	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx subscriber grams start_period end_period status
-        pack_subscription CALLDICT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber subscription_idx _68
-        s0 s1 s7 XCHG3
-        32 PUSHINT	//  src_addr msg_value current_period pool_config performance subscriber subscribers transaction_fee last_idx subscription_idx=0 _68 subscription_idx subscriptions _69=32
-        DICTUSETB	//  src_addr msg_value current_period pool_config performance subscriber subscribers transaction_fee last_idx subscription_idx=0 subscriptions
-        s0 s5 XCHG	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber
+      NULLSWAPIFNOT2	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription subscription_period user_subscription_found
+      s1 s13 XCPU	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription user_subscription_found subscription_period current_period
+      EQUAL	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription user_subscription_found _62
+      AND	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription _63
+      IF:<{	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription
+        DUP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription last_subscription
+        32 PLDU	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber last_subscription subscription_idx
+        SWAP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx last_subscription
+        unpack_subscription INLINECALLDICT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx _144 _145 _146 _147 _148 _149
+        s4 POP
+        s4 POP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx end_period status grams start_period
+        16 s() PUSH
+        s11 PUSH	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx end_period status grams start_period msg_value transaction_fee
+        SUB	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx end_period status grams start_period _74
+        s1 s2 XCHG	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx end_period status start_period grams _74
+        ADD	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx end_period status start_period grams
+        s8 PUSH
+        s4 s10 XCPU
+        s3 s1 s4 XCHG3	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx src_addr src_wc grams start_period end_period status
+        pack_subscription CALLDICT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber subscription_idx _77
+        s0 s1 s9 XCHG3
+        32 PUSHINT	//  subscriber_hash msg_value current_period pool_config performance subscriber subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 _77 subscription_idx subscriptions _78=32
+        DICTUSETB	//  subscriber_hash msg_value current_period pool_config performance subscriber subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriptions
+        s0 s7 XCHG	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber
       }>ELSE<{
-        DROP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscription_idx=0 subscriber
+        DROP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscription_idx=0 subscriber
       }>
-      SWAP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber subscription_idx=0
+      SWAP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber subscription_idx=0
     }>ELSE<{
-      NIP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_idx subscriber subscription_idx=0
+      NIP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_idx subscriber subscription_idx=0
     }>
-    s2 s5 XCPU
-    32 PUSHINT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx=0 subscriber last_idx subscriptions _76=32
+    s2 s7 XCPU
+    32 PUSHINT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx=0 subscriber last_idx subscriptions _85=32
     DICTUGETPREV
-    NULLSWAPIFNOT2	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx=0 subscriber _141 _140 _142
-    1 2 BLKDROP2	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx=0 subscriber last_subscription_idx s_found
-    IF:<{	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx=0 subscriber last_subscription_idx
-      s2 POP	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_subscription_idx subscriber
-      OVER	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx subscriber last_subscription_idx
-    }>	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx subscriber last_subscription_idx
-    s0 s2 XCHG	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_subscription_idx subscriber subscription_idx
-    INC	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee last_subscription_idx subscriber subscription_idx
-    s0 s2 XCHG	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx subscriber last_subscription_idx
-    pack_subscribers_entry CALLDICT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx subscriber _81
-    s8 s1 PUXC
-    16 PUSHINT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx _81 current_period subscriber _82=16
-    DICTUSETB	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx subscriber
-    NEWC	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx subscriber _85
-    STDICT	//  src_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee subscription_idx _86
-    s0 s9 s3 XCPUXC
-    8 PUSHPOW2	//  src_addr msg_value current_period pool_config performance subscriptions subscription_idx transaction_fee _86 src_addr subscribers _87=256
-    DICTUSETB	//  src_addr msg_value current_period pool_config performance subscriptions subscription_idx transaction_fee subscribers
-    s7 s1 PUXC	//  src_addr msg_value current_period pool_config performance subscriptions subscription_idx subscribers msg_value transaction_fee
-    SUB	//  src_addr msg_value current_period pool_config performance subscriptions subscription_idx subscribers _90
-    s8 s0 s6 XC2PU
+    NULLSWAPIFNOT2	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx=0 subscriber _151 _150 _152
+    1 2 BLKDROP2	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx=0 subscriber last_subscription_idx s_found
+    IF:<{	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx=0 subscriber last_subscription_idx
+      s2 POP	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_subscription_idx subscriber
+      OVER	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx subscriber last_subscription_idx
+    }>	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx subscriber last_subscription_idx
+    s0 s2 XCHG	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_subscription_idx subscriber subscription_idx
+    INC	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr last_subscription_idx subscriber subscription_idx
+    s0 s2 XCHG	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx subscriber last_subscription_idx
+    pack_subscribers_entry CALLDICT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx subscriber _90
+    s10 s1 PUXC
+    16 PUSHINT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx _90 current_period subscriber _91=16
+    DICTUSETB	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx subscriber
+    NEWC	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx subscriber _94
+    STDICT	//  subscriber_hash msg_value current_period pool_config performance subscriptions subscribers transaction_fee src_wc src_addr subscription_idx _95
+    s0 s11 s5 XCHG3
+    257 PUSHINT	//  subscription_idx msg_value current_period pool_config performance subscriptions src_addr transaction_fee src_wc _95 subscriber_hash subscribers _96=257
+    DICTISETB	//  subscription_idx msg_value current_period pool_config performance subscriptions src_addr transaction_fee src_wc subscribers
+    s8 s2 PUXC	//  subscription_idx msg_value current_period pool_config performance subscriptions src_addr subscribers src_wc msg_value transaction_fee
+    SUB	//  subscription_idx msg_value current_period pool_config performance subscriptions src_addr subscribers src_wc _99
+    s7 PUSH
+    s3 s4 XCHG
     0 PUSHINT
-    1 PUSHINT	//  subscribers msg_value current_period pool_config performance subscriptions subscription_idx src_addr _90 current_period _91=0 _92=1
-    pack_subscription CALLDICT	//  subscribers msg_value current_period pool_config performance subscriptions subscription_idx _93
-    s0 s2 XCHG
-    32 PUSHINT	//  subscribers msg_value current_period pool_config performance _93 subscription_idx subscriptions _94=32
+    1 PUSHINT	//  subscription_idx msg_value current_period pool_config performance subscriptions subscribers src_addr src_wc _99 current_period _100=0 _101=1
+    pack_subscription CALLDICT	//  subscription_idx msg_value current_period pool_config performance subscriptions subscribers _102
+    s7 s2 XCHG2
+    32 PUSHINT	//  subscribers msg_value current_period pool_config performance _102 subscription_idx subscriptions _103=32
     DICTUSETB	//  subscribers msg_value current_period pool_config performance subscriptions
     s3 s1 PUSH2
-    16 PUSHINT	//  subscribers msg_value current_period pool_config performance subscriptions current_period performance _98=16
+    16 PUSHINT	//  subscribers msg_value current_period pool_config performance subscriptions current_period performance _107=16
     DICTUGET
-    NULLSWAPIFNOT	//  subscribers msg_value current_period pool_config performance subscriptions _143 _144
+    NULLSWAPIFNOT	//  subscribers msg_value current_period pool_config performance subscriptions _153 _154
     DROP	//  subscribers msg_value current_period pool_config performance subscriptions performance_s
     unpack_performance INLINECALLDICT	//  subscribers msg_value current_period pool_config performance subscriptions rate aum units deposits withdrawals
     s3 s9 XCPU	//  subscribers msg_value current_period pool_config performance subscriptions rate withdrawals units deposits aum msg_value
-    ADD	//  subscribers msg_value current_period pool_config performance subscriptions rate withdrawals units deposits _107
-    s0 s9 XCHG	//  subscribers _107 current_period pool_config performance subscriptions rate withdrawals units deposits msg_value
-    ADD	//  subscribers _107 current_period pool_config performance subscriptions rate withdrawals units _108
+    ADD	//  subscribers msg_value current_period pool_config performance subscriptions rate withdrawals units deposits _116
+    s0 s9 XCHG	//  subscribers _116 current_period pool_config performance subscriptions rate withdrawals units deposits msg_value
+    ADD	//  subscribers _116 current_period pool_config performance subscriptions rate withdrawals units _117
     s3 s4 XCHG
     s3 s8 XCHG
-    ROT	//  subscribers subscriptions current_period pool_config performance rate _107 units _108 withdrawals
-    pack_performance CALLDICT	//  subscribers subscriptions current_period pool_config performance _109
+    ROT	//  subscribers subscriptions current_period pool_config performance rate _116 units _117 withdrawals
+    pack_performance CALLDICT	//  subscribers subscriptions current_period pool_config performance _118
     s3 s1 PUXC
-    16 PUSHINT	//  subscribers subscriptions current_period pool_config _109 current_period performance _110=16
+    16 PUSHINT	//  subscribers subscriptions current_period pool_config _118 current_period performance _119=16
     DICTUSETB	//  subscribers subscriptions current_period pool_config performance
     s0 s3 s4 XCHG3	//  current_period pool_config performance subscriptions subscribers
-    pack_state INLINECALLDICT	//  _112
+    pack_state INLINECALLDICT	//  _121
     c4 POP
   }>
   process_new_period PROC:<{
@@ -465,7 +485,7 @@ PROGRAM{
     REWRITESTDADDR	//  subscribers msg_value current_period pool_config performance subscriptions src_wc src_addr
     s4 PUSH	//  subscribers msg_value current_period pool_config performance subscriptions src_wc src_addr pool_config
     CTOS	//  subscribers msg_value current_period pool_config performance subscriptions src_wc src_addr _19
-    unpack_pool_config INLINECALLDICT	//  subscribers msg_value current_period pool_config performance subscriptions src_wc src_addr _136 _137 _138 _139 _140 _141 _142
+    unpack_pool_config INLINECALLDICT	//  subscribers msg_value current_period pool_config performance subscriptions src_wc src_addr _144 _145 _146 _147 _148 _149 _150
     s2 s3 XCHG
     3 BLKDROP
     s2 POP	//  subscribers msg_value current_period pool_config performance subscriptions src_wc src_addr transaction_fee owner owner_fee
@@ -480,90 +500,92 @@ PROGRAM{
     s7 s5 PUSH2
     16 PUSHINT	//  subscribers owner current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s current_period performance _33=16
     DICTUGETPREV
-    NULLSWAPIFNOT2	//  subscribers owner current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s _146 _145 _147
+    NULLSWAPIFNOT2	//  subscribers owner current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s _154 _153 _155
     NIP	//  subscribers owner current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s performance_prev_s found
     44 THROWIFNOT
-    s0 s4 XCHG	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s src_addr owner_fee performance_s src_wc
-    0 EQINT	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s src_addr owner_fee performance_s _39
-    s3 s9 PUSH2	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s src_addr owner_fee performance_s _39 src_addr owner
-    EQUAL	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s src_addr owner_fee performance_s _39 _40
-    s4 POP	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s _40 owner_fee performance_s _39
-    s0 s3 XCHG2	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s performance_s owner_fee _39 _40
-    AND	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s performance_s owner_fee _41
+    s4 PUSH	//  subscribers owner current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s performance_prev_s src_wc
+    0 EQINT	//  subscribers owner current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s performance_prev_s _39
+    s4 s10 PUXC	//  subscribers _39 current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s performance_prev_s src_addr owner
+    EQUAL	//  subscribers _39 current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s performance_prev_s _40
+    s1 s10 XCHG	//  subscribers performance_prev_s current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s _39 _40
+    AND	//  subscribers performance_prev_s current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s _41
     50 THROWIFNOT
     ACCEPT
-    32 PUSHPOW2DEC	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s performance_s owner_fee last_idx
-    s0 s2 XCHG	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s last_idx owner_fee performance_s
-    unpack_performance INLINECALLDICT	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s last_idx owner_fee _148 _149 _150 _151 _152
-    s4 POP	//  subscribers owner current_period pool_config performance subscriptions performance_prev_s last_idx owner_fee withdrawals aum units deposits
-    s0 s6 XCHG	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units performance_prev_s
-    LDGRAMS	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units _154 _153
-    DROP	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate
-    s2 s6 PUSH2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate aum deposits
-    SUB	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_aum
-    s2 s4 PUSH2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_aum units withdrawals
-    SUB	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_aum managed_units
-    TUCK	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units managed_aum managed_units
-    DIV	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate
-    s4 s0 PUSH2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate aum new_rate
-    DIV	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units
-    s2 s1 PUSH2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units managed_units new_rate
-    MUL	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units _78
-    s3 s4 PUSH2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units _78 managed_units prev_rate
-    MUL	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units _78 _79
-    GREATER	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units _80
-    IF:<{	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units
-      s2 s1 PUSH2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units managed_units new_rate
-      MUL	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units prev_rate managed_units new_rate new_units _81
-      s3 s4 XCHG2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units _81 new_units new_rate managed_units prev_rate
-      MUL	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units _81 new_units new_rate _82
-      s1 s3 XCHG	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units new_rate new_units _81 _82
-      SUB	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx owner_fee withdrawals aum units new_rate new_units _83
-      s0 s6 XCHG2	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx new_units withdrawals aum units new_rate _83 owner_fee
-      MUL	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx new_units withdrawals aum units new_rate _84
-      10000 PUSHINT	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx new_units withdrawals aum units new_rate _84 _85=10000
-      DIV	//  subscribers owner current_period pool_config performance subscriptions deposits last_idx new_units withdrawals aum units new_rate owners_share
-      s6 s8 XCPU
-      32 PUSHINT	//  subscribers owner current_period pool_config performance subscriptions deposits owners_share new_units withdrawals aum units new_rate last_idx subscriptions _98=32
+    32 PUSHPOW2DEC	//  subscribers performance_prev_s current_period pool_config performance subscriptions src_wc src_addr owner_fee performance_s last_idx
+    SWAP	//  subscribers performance_prev_s current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx performance_s
+    unpack_performance INLINECALLDICT	//  subscribers performance_prev_s current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx _156 _157 _158 _159 _160
+    s4 POP	//  subscribers performance_prev_s current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units deposits
+    s0 s12 XCHG	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units performance_prev_s
+    LDGRAMS	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units _162 _161
+    DROP	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate
+    s2 s12 PUSH2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate aum deposits
+    SUB	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_aum
+    s2 s4 PUSH2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_aum units withdrawals
+    SUB	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_aum managed_units
+    TUCK	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units managed_aum managed_units
+    DIV	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate
+    s4 s0 PUSH2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate aum new_rate
+    DIV	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units
+    s2 s1 PUSH2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units managed_units new_rate
+    MUL	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units _78
+    s3 s4 PUSH2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units _78 managed_units prev_rate
+    MUL	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units _78 _79
+    GREATER	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units _80
+    IF:<{	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units
+      s2 s1 PUSH2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units managed_units new_rate
+      MUL	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units prev_rate managed_units new_rate new_units _81
+      s3 s4 XCHG2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units _81 new_units new_rate managed_units prev_rate
+      MUL	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units _81 new_units new_rate _82
+      s1 s3 XCHG	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units new_rate new_units _81 _82
+      SUB	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr owner_fee last_idx withdrawals aum units new_rate new_units _83
+      s0 s7 XCHG2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units last_idx withdrawals aum units new_rate _83 owner_fee
+      MUL	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units last_idx withdrawals aum units new_rate _84
+      10000 PUSHINT	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units last_idx withdrawals aum units new_rate _84 _85=10000
+      DIV	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units last_idx withdrawals aum units new_rate owners_share
+      s5 s9 XCPU
+      32 PUSHINT	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units owners_share withdrawals aum units new_rate last_idx subscriptions _106=32
       DICTUGETPREV
-      NULLSWAPIFNOT2	//  subscribers owner current_period pool_config performance subscriptions deposits owners_share new_units withdrawals aum units new_rate _162 _161 _163
+      NULLSWAPIFNOT2	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units owners_share withdrawals aum units new_rate _170 _169 _171
       DROP
-      NIP	//  subscribers owner current_period pool_config performance subscriptions deposits owners_share new_units withdrawals aum units new_rate subscription_idx
-      s12 s6 s11 XC2PU
+      NIP	//  subscribers deposits current_period pool_config performance subscriptions src_wc src_addr new_units owners_share withdrawals aum units new_rate subscription_idx
+      s7 s8 s5 XCHG3
+      s12 PUSH
       0 PUSHINT
-      1 PUSHINT	//  subscribers new_rate current_period pool_config performance subscriptions deposits subscription_idx new_units withdrawals aum units owner owners_share current_period _107=0 _108=1
-      pack_subscription CALLDICT	//  subscribers new_rate current_period pool_config performance subscriptions deposits subscription_idx new_units withdrawals aum units _109
-      s0 s5 XCHG	//  subscribers new_rate current_period pool_config performance subscriptions deposits _109 new_units withdrawals aum units subscription_idx
-      INC	//  subscribers new_rate current_period pool_config performance subscriptions deposits _109 new_units withdrawals aum units _111
-      s5 s0 s7 XCHG3
-      32 PUSHINT	//  subscribers new_rate current_period pool_config performance units deposits aum new_units withdrawals _109 _111 subscriptions _112=32
-      DICTUSETB	//  subscribers new_rate current_period pool_config performance units deposits aum new_units withdrawals subscriptions
+      1 PUSHINT	//  subscribers deposits current_period pool_config performance subscriptions new_rate units new_units subscription_idx withdrawals aum src_addr src_wc owners_share current_period _115=0 _116=1
+      pack_subscription CALLDICT	//  subscribers deposits current_period pool_config performance subscriptions new_rate units new_units subscription_idx withdrawals aum _117
+      s0 s3 XCHG	//  subscribers deposits current_period pool_config performance subscriptions new_rate units new_units _117 withdrawals aum subscription_idx
+      INC	//  subscribers deposits current_period pool_config performance subscriptions new_rate units new_units _117 withdrawals aum _119
+      s3 s0 s7 XCHG3
+      32 PUSHINT	//  subscribers deposits current_period pool_config performance aum new_rate units new_units withdrawals _117 _119 subscriptions _120=32
+      DICTUSETB	//  subscribers deposits current_period pool_config performance aum new_rate units new_units withdrawals subscriptions
       s0 s5 XCHG
-      s0 s9 XCHG
-      s0 s3 XCHG	//  subscribers units current_period pool_config performance subscriptions deposits new_rate new_units withdrawals aum
+      s4 s4 s4 XCHG3	//  subscribers deposits current_period pool_config performance subscriptions aum units new_rate new_units withdrawals
     }>ELSE<{
-      s4 s14 XCHG
+      s5 s10 XCHG
+      s4 s9 XCHG
       s8 s7 XCHG2
-      5 BLKDROP	//  subscribers units current_period pool_config performance subscriptions deposits new_rate new_units withdrawals aum
+      6 BLKDROP	//  subscribers deposits current_period pool_config performance subscriptions aum units new_rate new_units withdrawals
     }>
-    s0 s2 PUXC
-    s10 s5 s10 XCHG3	//  subscribers new_units current_period pool_config performance subscriptions aum new_rate aum units deposits withdrawals
-    pack_performance CALLDICT	//  subscribers new_units current_period pool_config performance subscriptions aum _115
+    s4 PUSH
+    s0 s3 XCHG
+    s4 s1 s4 XCHG3
+    s10 s10 XCHG2	//  subscribers new_units current_period pool_config performance subscriptions aum new_rate aum units deposits withdrawals
+    pack_performance CALLDICT	//  subscribers new_units current_period pool_config performance subscriptions aum _123
     s0 s5 s3 XCPUXC
-    16 PUSHINT	//  subscribers new_units current_period pool_config aum subscriptions _115 current_period performance _116=16
+    16 PUSHINT	//  subscribers new_units current_period pool_config aum subscriptions _123 current_period performance _124=16
     DICTUSETB	//  subscribers new_units current_period pool_config aum subscriptions performance
     s0 s4 XCHG	//  subscribers new_units performance pool_config aum subscriptions current_period
     INC	//  subscribers new_units performance pool_config aum subscriptions current_period
-    0 PUSHINT	//  subscribers new_units performance pool_config aum subscriptions current_period _121=0
+    0 PUSHINT	//  subscribers new_units performance pool_config aum subscriptions current_period _129=0
     s2 s2 s2 XCPU2
     s3 s5 XCHG
-    s2 s8 XCHG	//  subscribers subscriptions performance pool_config current_period _121=0 aum new_units _122=0 _123=0
-    pack_performance CALLDICT	//  subscribers subscriptions performance pool_config current_period _124
+    s2 s8 XCHG	//  subscribers subscriptions performance pool_config current_period _129=0 aum new_units _130=0 _131=0
+    pack_performance CALLDICT	//  subscribers subscriptions performance pool_config current_period _132
     s0 s0 s3 XCPUXC
-    16 PUSHINT	//  subscribers subscriptions current_period pool_config _124 current_period performance _125=16
+    16 PUSHINT	//  subscribers subscriptions current_period pool_config _132 current_period performance _133=16
     DICTUSETB	//  subscribers subscriptions current_period pool_config performance
     s0 s3 s4 XCHG3	//  current_period pool_config performance subscriptions subscribers
-    pack_state INLINECALLDICT	//  _127
+    pack_state INLINECALLDICT	//  _135
     c4 POP
   }>
   process_activate_wallet PROC:<{
@@ -584,32 +606,33 @@ PROGRAM{
     EQUAL	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner _28 _29
     AND	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner _30
     50 THROWIFNOT
-    s9 s10 PUSH2
-    8 PUSHPOW2	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner wallet_id nominators _34=256
+    s9 s10 XCPU
+    8 PUSHPOW2	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee wallet_id nominators _34=256
     DICTUGET
-    NULLSWAPIFNOT	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner nominator_s found
+    NULLSWAPIFNOT	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee nominator_s found
     51 THROWIFNOT
-    unpack_nominator INLINECALLDICT	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner status balance stake
-    s2 PUSH	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner status balance stake status
-    2 EQINT	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner status balance stake _44
+    unpack_nominator INLINECALLDICT	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee status balance stake wallet_id
+    s3 PUSH	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee status balance stake wallet_id status
+    2 EQINT	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee status balance stake wallet_id _45
     78 THROWIF
-    s2 s14 XCPU	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner stake balance status new_status
-    EQUAL	//  pending_owner new_status nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner stake balance _47
+    s3 s14 XCPU	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee wallet_id balance stake status new_status
+    EQUAL	//  pending_owner new_status nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee wallet_id balance stake _48
     52 THROWIF
     ACCEPT
-    s13 s0 s0 XCHG3	//  pending_owner owner nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee new_status balance stake
-    pack_nominator INLINECALLDICT	//  pending_owner owner nominators wallet_id current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee _51
-    s0 s9 s10 XCHG3
-    8 PUSHPOW2	//  pending_owner owner owner_fee penalty_fee current_period subscribers performance subscriptions transaction_fee min_amount _51 wallet_id nominators _52=256
-    DICTUSETB	//  pending_owner owner owner_fee penalty_fee current_period subscribers performance subscriptions transaction_fee min_amount nominators
+    s2 PUSH
+    s3 s14 XCHG	//  pending_owner wallet_id nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee new_status balance stake wallet_id
+    pack_nominator INLINECALLDICT	//  pending_owner wallet_id nominators owner current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee _52
+    s0 s11 s10 XCHG3
+    8 PUSHPOW2	//  pending_owner penalty_fee owner_fee owner current_period subscribers performance subscriptions transaction_fee min_amount _52 wallet_id nominators _53=256
+    DICTUSETB	//  pending_owner penalty_fee owner_fee owner current_period subscribers performance subscriptions transaction_fee min_amount nominators
     s6 s5 s0 XCHG3
     s4 s8 XCHG
-    s3 s7 XCHG
-    s9 s10 s0 XCHG3	//  subscribers current_period performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner nominators
-    pack_pool_config INLINECALLDICT	//  subscribers current_period performance subscriptions pool_config
-    s0 s3 XCHG
+    s3 s9 XCHG
+    s7 s10 s0 XCHG3	//  subscribers subscriptions performance current_period transaction_fee min_amount owner_fee penalty_fee owner pending_owner nominators
+    pack_pool_config INLINECALLDICT	//  subscribers subscriptions performance current_period pool_config
+    s3 s3 XCHG2
     s0 s4 XCHG	//  current_period pool_config performance subscriptions subscribers
-    pack_state INLINECALLDICT	//  _55
+    pack_state INLINECALLDICT	//  _56
     c4 POP
   }>
   process_fetch_balances PROC:<{
@@ -618,7 +641,7 @@ PROGRAM{
     unpack_state INLINECALLDICT	//  s_addr msg_value current_period pool_config performance subscriptions subscribers
     s3 PUSH	//  s_addr msg_value current_period pool_config performance subscriptions subscribers pool_config
     CTOS	//  s_addr msg_value current_period pool_config performance subscriptions subscribers _16
-    unpack_pool_config INLINECALLDICT	//  s_addr msg_value current_period pool_config performance subscriptions subscribers _77 _78 _79 _80 _81 _82 _83
+    unpack_pool_config INLINECALLDICT	//  s_addr msg_value current_period pool_config performance subscriptions subscribers _78 _79 _80 _81 _82 _83 _84
     NIP
     2 2 BLKDROP2
     s2 POP	//  s_addr msg_value current_period pool_config performance subscriptions subscribers transaction_fee nominators owner
@@ -645,47 +668,47 @@ PROGRAM{
       DUP	//  subscribers nominators current_period pool_config performance subscriptions balance nominator address_idx found found
       IF:<{	//  subscribers nominators current_period pool_config performance subscriptions balance nominator address_idx found
         s0 s2 XCHG	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx nominator
-        unpack_nominator INLINECALLDICT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _89 _90 _91
-        2DROP	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx status
-        1 EQINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _45
+        unpack_nominator INLINECALLDICT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _90 _91 _92 _93
+        3 BLKDROP	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx status
+        1 EQINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _46
         IF:<{	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx
-          -1 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _46=-1
-          OVER	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _46=-1 address_idx
-          get_address_slice CALLDICT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47
-          1111708742 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47 _48=1111708742
-          1 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47 _48=1111708742 _49=1
-          0 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47 _48=1111708742 _49=1 _50=0
-          1000000 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47 _48=1111708742 _49=1 _50=0 _51=1000000
-          64 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47 _48=1111708742 _49=1 _50=0 _51=1000000 _52=64
+          -1 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47=-1
+          OVER	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _47=-1 address_idx
+          get_address_slice CALLDICT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _48
+          1111708742 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _48 _49=1111708742
+          1 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _48 _49=1111708742 _50=1
+          0 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _48 _49=1111708742 _50=1 _51=0
+          1000000 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _48 _49=1111708742 _50=1 _51=0 _52=1000000
+          64 PUSHINT	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx _48 _49=1111708742 _50=1 _51=0 _52=1000000 _53=64
           send_message CALLDICT
         }>	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx
       }>ELSE<{
         s2 POP	//  subscribers nominators current_period pool_config performance subscriptions balance found address_idx
       }>
       SWAP	//  subscribers nominators current_period pool_config performance subscriptions balance address_idx found
-      NOT	//  subscribers nominators current_period pool_config performance subscriptions balance address_idx _54
-      s1 s2 XCHG	//  subscribers nominators current_period pool_config performance subscriptions address_idx balance _54
+      NOT	//  subscribers nominators current_period pool_config performance subscriptions balance address_idx _55
+      s1 s2 XCHG	//  subscribers nominators current_period pool_config performance subscriptions address_idx balance _55
     }>	//  subscribers nominators current_period pool_config performance subscriptions address_idx balance
     NIP
     s5 POP	//  subscribers balance current_period pool_config performance subscriptions
     s3 s1 PUSH2
-    16 PUSHINT	//  subscribers balance current_period pool_config performance subscriptions current_period performance _57=16
+    16 PUSHINT	//  subscribers balance current_period pool_config performance subscriptions current_period performance _58=16
     DICTUGET
-    NULLSWAPIFNOT	//  subscribers balance current_period pool_config performance subscriptions _92 _93
+    NULLSWAPIFNOT	//  subscribers balance current_period pool_config performance subscriptions _94 _95
     DROP	//  subscribers balance current_period pool_config performance subscriptions performance_s
-    unpack_performance INLINECALLDICT	//  subscribers balance current_period pool_config performance subscriptions _94 _95 _96 _97 _98
+    unpack_performance INLINECALLDICT	//  subscribers balance current_period pool_config performance subscriptions _96 _97 _98 _99 _100
     s3 POP	//  subscribers balance current_period pool_config performance subscriptions rate withdrawals units deposits
     s0 s8 XCHG	//  subscribers deposits current_period pool_config performance subscriptions rate withdrawals units balance
-    FIRST	//  subscribers deposits current_period pool_config performance subscriptions rate withdrawals units _66
+    FIRST	//  subscribers deposits current_period pool_config performance subscriptions rate withdrawals units _67
     s0 s3 XCHG
     s0 s4 XCHG
-    s1 s8 s8 XCHG3	//  subscribers subscriptions current_period pool_config performance rate _66 units deposits withdrawals
-    pack_performance CALLDICT	//  subscribers subscriptions current_period pool_config performance _67
+    s1 s8 s8 XCHG3	//  subscribers subscriptions current_period pool_config performance rate _67 units deposits withdrawals
+    pack_performance CALLDICT	//  subscribers subscriptions current_period pool_config performance _68
     s3 s1 PUXC
-    16 PUSHINT	//  subscribers subscriptions current_period pool_config _67 current_period performance _68=16
+    16 PUSHINT	//  subscribers subscriptions current_period pool_config _68 current_period performance _69=16
     DICTUSETB	//  subscribers subscriptions current_period pool_config performance
     s0 s3 s4 XCHG3	//  current_period pool_config performance subscriptions subscribers
-    pack_state INLINECALLDICT	//  _70
+    pack_state INLINECALLDICT	//  _71
     c4 POP
   }>
   process_got_balance PROC:<{
@@ -708,12 +731,12 @@ PROGRAM{
     55 THROWIFNOT
     ACCEPT
     SWAP	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr nominator
-    unpack_nominator INLINECALLDICT	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr _76 _77 _78
-    2DROP	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr status
-    s13 s12 PUSH2	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr status balance stake
-    pack_nominator INLINECALLDICT	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr _38
+    unpack_nominator INLINECALLDICT	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr _77 _78 _79 _80
+    2 1 BLKDROP2	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr status wallet_id
+    s14 s13 s(-2) PU2XC	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr status balance stake wallet_id
+    pack_nominator INLINECALLDICT	//  nominators balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner pending_owner src_addr _39
     s0 s1 s14 XCHG3
-    8 PUSHPOW2	//  pending_owner balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner _38 src_addr nominators _39=256
+    8 PUSHPOW2	//  pending_owner balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner _39 src_addr nominators _40=256
     DICTUSETB	//  pending_owner balance stake current_period subscribers performance subscriptions transaction_fee min_amount owner_fee penalty_fee owner nominators
     s5 s6 XCHG
     s4 s5 XCHG
@@ -722,23 +745,23 @@ PROGRAM{
     s1 s12 XCHG	//  subscriptions balance stake current_period subscribers performance transaction_fee min_amount owner_fee penalty_fee owner pending_owner nominators
     pack_pool_config INLINECALLDICT	//  subscriptions balance stake current_period subscribers performance pool_config
     s3 s1 PUSH2
-    16 PUSHINT	//  subscriptions balance stake current_period subscribers performance pool_config current_period performance _44=16
+    16 PUSHINT	//  subscriptions balance stake current_period subscribers performance pool_config current_period performance _45=16
     DICTUGET
-    NULLSWAPIFNOT	//  subscriptions balance stake current_period subscribers performance pool_config _79 _80
+    NULLSWAPIFNOT	//  subscriptions balance stake current_period subscribers performance pool_config _81 _82
     DROP	//  subscriptions balance stake current_period subscribers performance pool_config performance_s
     unpack_performance INLINECALLDICT	//  subscriptions balance stake current_period subscribers performance pool_config rate aum units deposits withdrawals
     s3 s10 XCHG2	//  subscriptions withdrawals stake current_period subscribers performance pool_config rate deposits units aum balance
-    ADD	//  subscriptions withdrawals stake current_period subscribers performance pool_config rate deposits units _53
-    s0 s8 XCHG2	//  subscriptions withdrawals units current_period subscribers performance pool_config rate deposits _53 stake
-    ADD	//  subscriptions withdrawals units current_period subscribers performance pool_config rate deposits _54
+    ADD	//  subscriptions withdrawals stake current_period subscribers performance pool_config rate deposits units _54
+    s0 s8 XCHG2	//  subscriptions withdrawals units current_period subscribers performance pool_config rate deposits _54 stake
+    ADD	//  subscriptions withdrawals units current_period subscribers performance pool_config rate deposits _55
     s4 s1 s3 XCHG3
-    s7 s1 s8 XCHG3	//  subscriptions pool_config performance current_period subscribers rate _54 units deposits withdrawals
-    pack_performance CALLDICT	//  subscriptions pool_config performance current_period subscribers _55
+    s7 s1 s8 XCHG3	//  subscriptions pool_config performance current_period subscribers rate _55 units deposits withdrawals
+    pack_performance CALLDICT	//  subscriptions pool_config performance current_period subscribers _56
     s0 s2 s3 XCPUXC
-    16 PUSHINT	//  subscriptions pool_config subscribers current_period _55 current_period performance _56=16
+    16 PUSHINT	//  subscriptions pool_config subscribers current_period _56 current_period performance _57=16
     DICTUSETB	//  subscriptions pool_config subscribers current_period performance
     s4 s2 XCHG2	//  current_period pool_config performance subscriptions subscribers
-    pack_state INLINECALLDICT	//  _58
+    pack_state INLINECALLDICT	//  _59
     c4 POP
   }>
   process_set_config PROC:<{
@@ -888,11 +911,11 @@ PROGRAM{
   process_transfer_to_wallet PROC:<{
     //  s_addr query_id msg_value nominator_address grams
     s3 POP	//  s_addr grams msg_value nominator_address
-    unpack_state INLINECALLDICT	//  s_addr grams msg_value nominator_address _59 _60 _61 _62 _63
+    unpack_state INLINECALLDICT	//  s_addr grams msg_value nominator_address _60 _61 _62 _63 _64
     s3 s4 XCHG
     4 BLKDROP	//  s_addr grams msg_value nominator_address pool_config
     CTOS	//  s_addr grams msg_value nominator_address _18
-    unpack_pool_config INLINECALLDICT	//  s_addr grams msg_value nominator_address _64 _65 _66 _67 _68 _69 _70
+    unpack_pool_config INLINECALLDICT	//  s_addr grams msg_value nominator_address _65 _66 _67 _68 _69 _70 _71
     NIP
     2 2 BLKDROP2
     s2 POP	//  s_addr grams msg_value nominator_address transaction_fee nominators owner
@@ -920,18 +943,18 @@ PROGRAM{
     NOT	//  nominator_address grams nominator _43
     50 THROWIFNOT
     ACCEPT
-    unpack_nominator INLINECALLDICT	//  nominator_address grams _75 _76 _77
-    2DROP	//  nominator_address grams status
-    1 EQINT	//  nominator_address grams _51
+    unpack_nominator INLINECALLDICT	//  nominator_address grams _76 _77 _78 _79
+    3 BLKDROP	//  nominator_address grams status
+    1 EQINT	//  nominator_address grams _52
     IF:<{	//  nominator_address grams
       -1 PUSHINT
-      ROT	//  grams _52=-1 nominator_address
-      get_address_slice CALLDICT	//  grams _53
-      0 PUSHINT	//  grams _53 _54=0
+      ROT	//  grams _53=-1 nominator_address
+      get_address_slice CALLDICT	//  grams _54
+      0 PUSHINT	//  grams _54 _55=0
       s2 s0 s0 XC2PU
       1 PUSHINT
       s0 s1 s3 XCHG3
-      64 PUSHINT	//  _53 _54=0 _55=1 _56=0 grams _57=64
+      64 PUSHINT	//  _54 _55=0 _56=1 _57=0 grams _58=64
       send_message CALLDICT
     }>ELSE<{
       2DROP	// 
@@ -940,11 +963,11 @@ PROGRAM{
   process_withdraw_from_wallet PROC:<{
     //  s_addr query_id msg_value nominator_address grams
     s3 POP	//  s_addr grams msg_value nominator_address
-    unpack_state INLINECALLDICT	//  s_addr grams msg_value nominator_address _53 _54 _55 _56 _57
+    unpack_state INLINECALLDICT	//  s_addr grams msg_value nominator_address _54 _55 _56 _57 _58
     s3 s4 XCHG
     4 BLKDROP	//  s_addr grams msg_value nominator_address pool_config
     CTOS	//  s_addr grams msg_value nominator_address _18
-    unpack_pool_config INLINECALLDICT	//  s_addr grams msg_value nominator_address _58 _59 _60 _61 _62 _63 _64
+    unpack_pool_config INLINECALLDICT	//  s_addr grams msg_value nominator_address _59 _60 _61 _62 _63 _64 _65
     NIP
     2 2 BLKDROP2
     s2 POP	//  s_addr grams msg_value nominator_address transaction_fee nominators owner
@@ -965,22 +988,22 @@ PROGRAM{
     DICTUGET
     NULLSWAPIFNOT	//  nominator_address grams nominator found
     NOT	//  nominator_address grams nominator _37
-    50 THROWIFNOT
+    51 THROWIFNOT
     ACCEPT
-    unpack_nominator INLINECALLDICT	//  nominator_address grams _69 _70 _71
-    2DROP	//  nominator_address grams status
-    1 EQINT	//  nominator_address grams _45
+    unpack_nominator INLINECALLDICT	//  nominator_address grams _70 _71 _72 _73
+    3 BLKDROP	//  nominator_address grams status
+    1 EQINT	//  nominator_address grams _46
     IF:<{	//  nominator_address grams
       -1 PUSHINT
-      ROT	//  grams _46=-1 nominator_address
-      get_address_slice CALLDICT	//  grams _47
+      ROT	//  grams _47=-1 nominator_address
+      get_address_slice CALLDICT	//  grams _48
       SWAP
       1380209751 PUSHINT
       1 PUSHINT
       0 PUSHINT
       ROT
       s0 s3 XCHG
-      64 PUSHINT	//  _47 _48=1380209751 _49=1 _50=0 grams _51=64
+      64 PUSHINT	//  _48 _49=1380209751 _50=1 _51=0 grams _52=64
       send_message CALLDICT
     }>ELSE<{
       2DROP	// 
@@ -1173,6 +1196,21 @@ PROGRAM{
     STREF	//  _33
     ENDC	//  nominator
     HASHCU	//  _35
+    NEWC	//  _35 _36
+    256 STU	//  _38
+    ENDC	//  _39
+    CTOS	//  _40
+    256 PLDU	//  _42
+  }>
+  exc PROCREF:<{
+    //  a1 a2
+    DUMPSTK
+    SWAP	//  a2 a1
+    s0 DUMP	//  a2 _4
+    DROP	//  a2
+    s0 DUMP	//  _6
+    DROP	// 
+    97 THROW
   }>
   try_init PROCREF:<{
     //  in_msg
@@ -1189,46 +1227,55 @@ PROGRAM{
     37 THROWIF
     ACCEPT	//  cs current_period pool_config
     CTOS	//  cs current_period _29
-    unpack_pool_config INLINECALLDICT	//  cs current_period _124 _125 _126 _127 _128 _129 _130
+    unpack_pool_config INLINECALLDICT	//  cs current_period _140 _141 _142 _143 _144 _145 _146
     2DROP	//  cs current_period transaction_fee min_amount owner_fee penalty_fee owner
     s0 s6 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee cs
     256 LDSLICE	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address cs
     LDREF	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators cs
-    LDREF	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators _136 _135
+    LDREF	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators _152 _151
     DROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code
     0 PUSHINT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address=0
-    1 PUSHINT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address=0 nominator_idx=1
     UNTIL:<{
-      s1 s3 XCPU
-      8 PUSHPOW2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx nominator_address nominators _48=256
+      s2 PUSH
+      8 PUSHPOW2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address nominators _46=256
       DICTUGETNEXT
-      NULLSWAPIFNOT2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx _138 _137 _139
-      s2 POP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address
-      OVER	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address s_found
-      IF:<{	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address
-        s3 s5 s2 PUSH3	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address nominator_code pool_address nominator_idx
-        calculate_nominator_address CALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _50
-        OVER	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _50 nominator_address
-        NEQ	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _51
-        IF:<{	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address
+      NULLSWAPIFNOT2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator nominator_address s_found
+      DUP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator nominator_address s_found s_found
+      IF:<{	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator nominator_address s_found
+        s0 s2 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator
+        unpack_nominator INLINECALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address _156 _157 _158 _159
+        s0 s3 XCHG
+        3 BLKDROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx
+        s3 s5 s0 PUSH3	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx nominator_code pool_address nominator_idx
+        calculate_nominator_address CALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx hash
+        s0 s2 PUSH2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx hash hash nominator_address
+        NEQ	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx hash _55
+        IF:<{	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx hash
           DUMPSTK
-          2 PUSHINT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _54=2
-          0 PUSHINT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _54=2 _55=0
-          DUP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _54=2 _55=0 _56=0
-          pack_nominator INLINECALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address _57
-          s0 s0 s5 XCPUXC
-          8 PUSHPOW2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominator_address nominator_code nominator_idx s_found _57 nominator_address nominators _58=256
-          DICTUSETB	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominator_address nominator_code nominator_idx s_found nominators
-          s0 s4 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address
-        }>	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address
-      }>	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_idx s_found nominator_address
-      s0 s2 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address s_found nominator_idx
-      INC	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address s_found nominator_idx
-      SWAP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address nominator_idx s_found
-      NOT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address nominator_idx _62
-    }>	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address nominator_idx
-    s3 s4 XCHG
-    4 BLKDROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee nominators
+          s0 DUMP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx _58
+          DROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx
+          SWAP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_idx nominator_address
+          s0 DUMP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_idx nominator_address
+          2 PUSHINT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_idx nominator_address _62=2
+          0 PUSHINT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_idx nominator_address _62=2 _63=0
+          s0 s1 s2 XCPUXC
+          s0 s4 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address _62=2 _63=0 _64=0 nominator_idx
+          pack_nominator INLINECALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address _65
+          s0 s0 s4 XCPUXC
+          8 PUSHPOW2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominator_address nominator_code s_found _65 nominator_address nominators _66=256
+          DICTUSETB	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominator_address nominator_code s_found nominators
+          s0 s3 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address
+        }>ELSE<{
+          2DROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address
+        }>
+      }>ELSE<{
+        s2 POP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address
+      }>
+      SWAP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address s_found
+      NOT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address _68
+    }>	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator_address
+    s2 s3 XCHG
+    3 BLKDROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee nominators
     s0 s2 XCHG	//  owner current_period transaction_fee min_amount nominators penalty_fee owner_fee
     s0 DUMP	//  owner current_period transaction_fee min_amount nominators penalty_fee owner_fee
     s0 s4 XCHG	//  owner current_period owner_fee min_amount nominators penalty_fee transaction_fee
@@ -1236,60 +1283,67 @@ PROGRAM{
     s4 s1 s4 XCHG3
     0 PUSHINT
     s7 PUSH
-    s0 s2 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee owner _67=0 nominators
+    s0 s2 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee owner _73=0 nominators
     pack_pool_config INLINECALLDICT	//  owner current_period pool_config
     NEWDICT	//  owner current_period pool_config performance
     BALANCE	//  owner current_period pool_config performance balance
     FIRST	//  owner current_period pool_config performance gram_balance
-    10000 PUSHINT	//  owner current_period pool_config performance gram_balance _76=10000
-    2DUP	//  owner current_period pool_config performance gram_balance _76=10000 gram_balance _77=10000
-    DIV	//  owner current_period pool_config performance gram_balance _76=10000 _78
-    0 PUSHINT	//  owner current_period pool_config performance gram_balance _76=10000 _78 _79=0
+    10000 PUSHINT	//  owner current_period pool_config performance gram_balance _82=10000
+    2DUP	//  owner current_period pool_config performance gram_balance _82=10000 gram_balance _83=10000
+    DIV	//  owner current_period pool_config performance gram_balance _82=10000 _84
+    0 PUSHINT	//  owner current_period pool_config performance gram_balance _82=10000 _84 _85=0
     s0 s3 PUSH2
-    3 -ROLL	//  owner current_period pool_config performance gram_balance _76=10000 gram_balance _78 _79=0 _80=0
-    pack_performance CALLDICT	//  owner current_period pool_config performance gram_balance _81
+    3 -ROLL	//  owner current_period pool_config performance gram_balance _82=10000 gram_balance _84 _85=0 _86=0
+    pack_performance CALLDICT	//  owner current_period pool_config performance gram_balance _87
     s0 s4 s2 XCPUXC
-    16 PUSHINT	//  owner current_period pool_config gram_balance _81 current_period performance _82=16
+    16 PUSHINT	//  owner current_period pool_config gram_balance _87 current_period performance _88=16
     DICTUSETB	//  owner current_period pool_config gram_balance performance
     NEWDICT	//  owner current_period pool_config gram_balance performance subscriptions
     NEWDICT	//  owner current_period pool_config gram_balance performance subscriptions subscribers
     NEWDICT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber
-    1 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _91=1
-    pack_subscribers_entry CALLDICT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _92
-    s7 s1 PUXC
-    16 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions subscribers _92 current_period subscriber _93=16
-    DICTUSETB	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber
-    NEWC	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _96
-    STDICT	//  owner current_period pool_config gram_balance performance subscriptions subscribers _97
-    s7 s1 PUXC
-    8 PUSHPOW2	//  owner current_period pool_config gram_balance performance subscriptions _97 owner subscribers _98=256
-    DICTUSETB	//  owner current_period pool_config gram_balance performance subscriptions subscribers
-    s0 s6 XCHG
-    0 PUSHINT
+    0 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _97=0
+    NEWC	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _97=0 _98
+    8 STI	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _100
+    s8 s(-1) PUXC	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber owner _100
+    256 STU	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _102
+    ENDC	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber _103
+    HASHCU	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber subscriber_hash
+    1 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber subscriber_hash _106=1
+    pack_subscribers_entry CALLDICT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber subscriber_hash _107
+    s0 s8 s2 XCPUXC
+    16 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber_hash _107 current_period subscriber _108=16
+    DICTUSETB	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber_hash subscriber
+    NEWC	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber_hash subscriber _111
+    STDICT	//  owner current_period pool_config gram_balance performance subscriptions subscribers subscriber_hash _112
+    s0 s2 XCHG
+    257 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions _112 subscriber_hash subscribers _113=257
+    DICTISETB	//  owner current_period pool_config gram_balance performance subscriptions subscribers
+    0 PUSHINT	//  owner current_period pool_config gram_balance performance subscriptions subscribers _116=0
+    s7 s0 s0 XC2PU
     1 PUSHINT
-    s5 PUSH
-    s8 s2 s(-1) PUXC2	//  subscribers current_period pool_config gram_balance performance subscriptions owner gram_balance current_period _101=0 _102=1
-    pack_subscription CALLDICT	//  subscribers current_period pool_config gram_balance performance subscriptions _103
+    s6 PUSH
+    s9 s2 s(-1) PUXC2	//  subscribers current_period pool_config gram_balance performance subscriptions owner _116=0 gram_balance current_period _117=0 _118=1
+    pack_subscription CALLDICT	//  subscribers current_period pool_config gram_balance performance subscriptions _119
     1 PUSHINT
     ROT
-    32 PUSHINT	//  subscribers current_period pool_config gram_balance performance _103 _104=1 subscriptions _105=32
+    32 PUSHINT	//  subscribers current_period pool_config gram_balance performance _119 _120=1 subscriptions _121=32
     DICTUSETB	//  subscribers current_period pool_config gram_balance performance subscriptions
     s0 s4 XCHG	//  subscribers subscriptions pool_config gram_balance performance current_period
     INC	//  subscribers subscriptions pool_config gram_balance performance current_period
-    0 PUSHINT	//  subscribers subscriptions pool_config gram_balance performance current_period _110=0
+    0 PUSHINT	//  subscribers subscriptions pool_config gram_balance performance current_period _126=0
     s3 PUSH
-    10000 PUSHINT	//  subscribers subscriptions pool_config gram_balance performance current_period _110=0 gram_balance _111=10000
-    DIV	//  subscribers subscriptions pool_config gram_balance performance current_period _110=0 _112
-    s1 s1 PUSH2	//  subscribers subscriptions pool_config gram_balance performance current_period _110=0 _112 _113=0 _114=0
+    10000 PUSHINT	//  subscribers subscriptions pool_config gram_balance performance current_period _126=0 gram_balance _127=10000
+    DIV	//  subscribers subscriptions pool_config gram_balance performance current_period _126=0 _128
+    s1 s1 PUSH2	//  subscribers subscriptions pool_config gram_balance performance current_period _126=0 _128 _129=0 _130=0
     s3 s4 XCHG
-    s3 s6 XCHG	//  subscribers subscriptions pool_config current_period performance _110=0 gram_balance _112 _113=0 _114=0
-    pack_performance CALLDICT	//  subscribers subscriptions pool_config current_period performance _115
+    s3 s6 XCHG	//  subscribers subscriptions pool_config current_period performance _126=0 gram_balance _128 _129=0 _130=0
+    pack_performance CALLDICT	//  subscribers subscriptions pool_config current_period performance _131
     s2 s1 PUXC
-    16 PUSHINT	//  subscribers subscriptions pool_config current_period _115 current_period performance _116=16
+    16 PUSHINT	//  subscribers subscriptions pool_config current_period _131 current_period performance _132=16
     DICTUSETB	//  subscribers subscriptions pool_config current_period performance
     s0 s3 s3 XCHG3
     s0 s4 XCHG	//  current_period pool_config performance subscriptions subscribers
-    pack_state INLINECALLDICT	//  _118
+    pack_state INLINECALLDICT	//  _134
     c4 POP
   }>
   recv_external PROC:<{
@@ -1349,7 +1403,7 @@ PROGRAM{
   }>
   get_subscription PROC:<{
     //  subscription_id direction
-    unpack_state INLINECALLDICT	//  subscription_id direction _36 _37 _38 _39 _40
+    unpack_state INLINECALLDICT	//  subscription_id direction _38 _39 _40 _41 _42
     s1 s4 XCHG
     4 BLKDROP	//  subscription_id direction subscriptions
     0 PUSHINT	//  subscription_id direction subscriptions s_found=0
@@ -1387,23 +1441,24 @@ PROGRAM{
       NIP	//  subscription_id subscription s_found
     }>
     IFJMP:<{	//  subscription_id subscription
-      unpack_subscription INLINECALLDICT	//  subscription_id subscriber grams start_period end_period status
+      unpack_subscription INLINECALLDICT	//  subscription_id subscriber subsctiber_wc grams start_period end_period status
+      s4 s5 XCHG	//  subscription_id subsctiber_wc subscriber grams start_period end_period status
     }>	//  subscription_id subscription
     2DROP	// 
-    0 PUSHINT	//  _30=0
-    s0 s0 s0 PUSH3	//  _30=0 _31=0 _32=0 _33=0
-    s0 s0 PUSH2	//  _30=0 _31=0 _32=0 _33=0 _34=0 _35=0
+    0 PUSHINT	//  _31=0
+    s0 s0 s0 PUSH3	//  _31=0 _32=0 _33=0 _34=0
+    s0 s0 s0 PUSH3	//  _31=0 _32=0 _33=0 _34=0 _35=0 _36=0 _37=0
   }>
   get_nominator PROC:<{
     //  nominator_address direction
-    unpack_state INLINECALLDICT	//  nominator_address direction _41 _42 _43 _44 _45
+    unpack_state INLINECALLDICT	//  nominator_address direction _43 _44 _45 _46 _47
     s3 s4 XCHG
     4 BLKDROP	//  nominator_address direction pool_config
     0 PUSHINT	//  nominator_address direction pool_config s_found=0
     PUSHNULL	//  nominator_address direction pool_config s_found=0 nominator
     s0 s2 XCHG	//  nominator_address direction nominator s_found=0 pool_config
     CTOS	//  nominator_address direction nominator s_found=0 _19
-    unpack_pool_config INLINECALLDICT	//  nominator_address direction nominator s_found=0 _46 _47 _48 _49 _50 _51 _52
+    unpack_pool_config INLINECALLDICT	//  nominator_address direction nominator s_found=0 _48 _49 _50 _51 _52 _53 _54
     s0 s6 XCHG
     6 BLKDROP	//  nominator_address direction nominator s_found=0 nominators
     s3 PUSH	//  nominator_address direction nominator s_found=0 nominators direction
@@ -1439,11 +1494,12 @@ PROGRAM{
     }>
     SWAP	//  nominator_address nominator s_found
     IFJMP:<{	//  nominator_address nominator
-      unpack_nominator INLINECALLDICT	//  nominator_address status balance stake
+      unpack_nominator INLINECALLDICT	//  nominator_address status balance stake wallet_id
     }>	//  nominator_address nominator
     2DROP	// 
-    0 PUSHINT	//  _37=0
-    s0 s0 s0 PUSH3	//  _37=0 _38=0 _39=0 _40=0
+    0 PUSHINT	//  _38=0
+    s0 s0 s0 PUSH3	//  _38=0 _39=0 _40=0 _41=0
+    DUP	//  _38=0 _39=0 _40=0 _41=0 _42=0
   }>
   get_performance PROC:<{
     //  period direction
@@ -1493,103 +1549,120 @@ PROGRAM{
     s0 s0 PUSH2	//  _30=0 _31=0 _32=0 _33=0 _34=0 _35=0
   }>
   get_subscribers_subscription PROC:<{
-    //  subscriber_address period direction
-    unpack_state INLINECALLDICT	//  subscriber_address period direction _38 _39 _40 _41 _42
+    //  subscribers_wc subscriber_address period direction
+    unpack_state INLINECALLDICT	//  subscribers_wc subscriber_address period direction _47 _48 _49 _50 _51
     s0 s4 XCHG
-    4 BLKDROP	//  subscriber_address period direction subscribers
-    PUSHNULL	//  subscriber_address period direction subscribers subscriber_entry_s
-    s4 s4 XCHG2
-    8 PUSHPOW2	//  subscriber_entry_s period direction subscriber_address subscribers _15=256
-    DICTUGET
-    NULLSWAPIFNOT	//  subscriber_entry_s period direction subscriber_s s_found
-    DUP	//  subscriber_entry_s period direction subscriber_s s_found s_found
-    NOT	//  subscriber_entry_s period direction subscriber_s s_found _17
-    IFJMP:<{	//  subscriber_entry_s period direction subscriber_s s_found
+    4 BLKDROP	//  subscribers_wc subscriber_address period direction subscribers
+    PUSHNULL	//  subscribers_wc subscriber_address period direction subscribers subscriber_entry_s
+    s0 s5 XCHG
+    NEWC	//  subscriber_entry_s subscriber_address period direction subscribers subscribers_wc _15
+    8 STI	//  subscriber_entry_s subscriber_address period direction subscribers _17
+    s1 s4 XCHG	//  subscriber_entry_s subscribers period direction subscriber_address _17
+    256 STU	//  subscriber_entry_s subscribers period direction _19
+    ENDC	//  subscriber_entry_s subscribers period direction _20
+    HASHCU	//  subscriber_entry_s subscribers period direction subscriber_hash
+    s0 s3 XCHG2
+    257 PUSHINT	//  subscriber_entry_s direction period subscriber_hash subscribers _24=257
+    DICTIGET
+    NULLSWAPIFNOT	//  subscriber_entry_s direction period subscriber_s s_found
+    DUP	//  subscriber_entry_s direction period subscriber_s s_found s_found
+    NOT	//  subscriber_entry_s direction period subscriber_s s_found _26
+    IFJMP:<{	//  subscriber_entry_s direction period subscriber_s s_found
       5 BLKDROP	// 
-      0 PUSHINT	//  _18=0
-      DUP	//  _18=0 _19=0
-    }>	//  subscriber_entry_s period direction subscriber_s s_found
-    SWAP	//  subscriber_entry_s period direction s_found subscriber_s
-    PLDDICT	//  subscriber_entry_s period direction s_found subscriber
-    s2 PUSH	//  subscriber_entry_s period direction s_found subscriber direction
-    0 EQINT	//  subscriber_entry_s period direction s_found subscriber _23
-    IF:<{	//  subscriber_entry_s period direction s_found subscriber
+      0 PUSHINT	//  _27=0
+      DUP	//  _27=0 _28=0
+    }>	//  subscriber_entry_s direction period subscriber_s s_found
+    SWAP	//  subscriber_entry_s direction period s_found subscriber_s
+    PLDDICT	//  subscriber_entry_s direction period s_found subscriber
+    s3 PUSH	//  subscriber_entry_s direction period s_found subscriber direction
+    0 EQINT	//  subscriber_entry_s direction period s_found subscriber _32
+    IF:<{	//  subscriber_entry_s direction period s_found subscriber
       NIP
-      s3 POP	//  subscriber period direction
-      s1 s2 PUSH2
-      16 PUSHINT	//  subscriber period direction period subscriber _24=16
+      s3 POP	//  subscriber direction period
+      s0 s2 PUSH2
+      16 PUSHINT	//  subscriber direction period period subscriber _33=16
       DICTUGET
-      NULLSWAPIFNOT	//  subscriber period direction subscriber_entry_s s_found
-      s0 s4 XCHG2	//  subscriber_entry_s period direction s_found subscriber
-    }>	//  subscriber_entry_s period direction s_found subscriber
-    s2 PUSH	//  subscriber_entry_s period direction s_found subscriber direction
-    1 EQINT	//  subscriber_entry_s period direction s_found subscriber _27
-    IF:<{	//  subscriber_entry_s period direction s_found subscriber
+      NULLSWAPIFNOT	//  subscriber direction period subscriber_entry_s s_found
+      s0 s4 XCHG2	//  subscriber_entry_s direction period s_found subscriber
+    }>	//  subscriber_entry_s direction period s_found subscriber
+    s3 PUSH	//  subscriber_entry_s direction period s_found subscriber direction
+    1 EQINT	//  subscriber_entry_s direction period s_found subscriber _36
+    IF:<{	//  subscriber_entry_s direction period s_found subscriber
       NIP
-      s3 POP	//  subscriber period direction
-      s1 s2 XCPU
-      16 PUSHINT	//  subscriber direction period subscriber _28=16
+      s3 POP	//  subscriber direction period
+      s2 PUSH
+      16 PUSHINT	//  subscriber direction period subscriber _37=16
       DICTUGETNEXT
       NULLSWAPIFNOT2	//  subscriber direction subscriber_entry_s period s_found
-      s4 s0 s3 XCHG3
-      s0 s2 XCHG	//  subscriber_entry_s period direction s_found subscriber
-    }>	//  subscriber_entry_s period direction s_found subscriber
-    s0 s2 XCHG	//  subscriber_entry_s period subscriber s_found direction
-    -1 EQINT	//  subscriber_entry_s period subscriber s_found _31
-    IF:<{	//  subscriber_entry_s period subscriber s_found
+      s1 s0 s4 XCHG3	//  subscriber_entry_s direction period s_found subscriber
+    }>	//  subscriber_entry_s direction period s_found subscriber
+    s0 s3 XCHG	//  subscriber_entry_s subscriber period s_found direction
+    -1 EQINT	//  subscriber_entry_s subscriber period s_found _40
+    IF:<{	//  subscriber_entry_s subscriber period s_found
       DROP
-      1 2 BLKDROP2
-      16 PUSHINT	//  period subscriber _32=16
+      s2 POP	//  period subscriber
+      16 PUSHINT	//  period subscriber _41=16
       DICTUGETPREV
       NULLSWAPIFNOT2	//  subscriber_entry_s period s_found
+      SWAP	//  subscriber_entry_s s_found period
     }>ELSE<{
-      NIP	//  subscriber_entry_s period s_found
+      s2 POP	//  subscriber_entry_s s_found period
     }>
+    SWAP	//  subscriber_entry_s period s_found
     IFJMP:<{	//  subscriber_entry_s period
       SWAP	//  period subscriber_entry_s
       unpack_subscribers_entry CALLDICT	//  period subscription_id
     }>	//  subscriber_entry_s period
     2DROP	// 
-    0 PUSHINT	//  _36=0
-    DUP	//  _36=0 _37=0
+    0 PUSHINT	//  _45=0
+    DUP	//  _45=0 _46=0
   }>
   get_subscribers_subscriptions PROC:<{
-    //  subscriber_address
-    unpack_state INLINECALLDICT	//  subscriber_address _30 _31 _32 _33 _34
+    //  subscriber_wc subscriber_address
+    unpack_state INLINECALLDICT	//  subscriber_wc subscriber_address _39 _40 _41 _42 _43
     s0 s4 XCHG
-    4 BLKDROP	//  subscriber_address subscribers
-    PUSHNULL	//  subscriber_address subscribers res
-    0 PUSHINT	//  subscriber_address subscribers res period=0
-    2SWAP
-    8 PUSHPOW2	//  res period=0 subscriber_address subscribers _17=256
-    DICTUGET
-    NULLSWAPIFNOT	//  res period=0 subscriber_s s_found
-    NOT	//  res period=0 subscriber_s _19
-    IFJMP:<{	//  res period=0 subscriber_s
-      2DROP	//  res
-    }>	//  res period=0 subscriber_s
-    PLDDICT	//  res period=0 subscriber
+    4 BLKDROP	//  subscriber_wc subscriber_address subscribers
+    PUSHNULL	//  subscriber_wc subscriber_address subscribers res
+    0 PUSHINT	//  subscriber_wc subscriber_address subscribers res period=0
+    s0 s4 XCHG
+    NEWC	//  period=0 subscriber_address subscribers res subscriber_wc _17
+    8 STI	//  period=0 subscriber_address subscribers res _19
+    s1 s3 XCHG	//  period=0 res subscribers subscriber_address _19
+    256 STU	//  period=0 res subscribers _21
+    ENDC	//  period=0 res subscribers _22
+    HASHCU	//  period=0 res subscribers subscriber_hash
+    SWAP
+    257 PUSHINT	//  period=0 res subscriber_hash subscribers _26=257
+    DICTIGET
+    NULLSWAPIFNOT	//  period=0 res subscriber_s s_found
+    NOT	//  period=0 res subscriber_s _28
+    IFJMP:<{	//  period=0 res subscriber_s
+      DROP
+      NIP	//  res
+    }>	//  period=0 res subscriber_s
+    PLDDICT	//  period=0 res subscriber
     UNTIL:<{
-      TUCK
-      16 PUSHINT	//  res subscriber period subscriber _23=16
+      s2 s2 XCPU
+      16 PUSHINT	//  subscriber res period subscriber _32=16
       DICTUGETNEXT
-      NULLSWAPIFNOT2	//  res subscriber subscriber_entry_s period s_found
-      DUP	//  res subscriber subscriber_entry_s period s_found s_found
-      IF:<{	//  res subscriber subscriber_entry_s period s_found
-        s0 s2 XCHG	//  res subscriber s_found period subscriber_entry_s
-        unpack_subscribers_entry CALLDICT	//  res subscriber s_found period subscription_id
-        s1 s(-1) PUXC	//  res subscriber s_found period period subscription_id
-        PAIR	//  res subscriber s_found period _27
-        s0 s4 XCHG2	//  period subscriber s_found _27 res
-        CONS	//  period subscriber s_found res
-        s0 s3 XCHG	//  res subscriber s_found period
+      NULLSWAPIFNOT2	//  subscriber res subscriber_entry_s period s_found
+      DUP	//  subscriber res subscriber_entry_s period s_found s_found
+      IF:<{	//  subscriber res subscriber_entry_s period s_found
+        s0 s2 XCHG	//  subscriber res s_found period subscriber_entry_s
+        unpack_subscribers_entry CALLDICT	//  subscriber res s_found period subscription_id
+        s1 s(-1) PUXC	//  subscriber res s_found period period subscription_id
+        PAIR	//  subscriber res s_found period _36
+        s0 s3 XCHG2	//  subscriber period s_found _36 res
+        CONS	//  subscriber period s_found res
+        s0 s2 XCHG	//  subscriber res s_found period
       }>ELSE<{
-        s2 POP	//  res subscriber s_found period
+        s2 POP	//  subscriber res s_found period
       }>
-      SWAP	//  res subscriber period s_found
-      NOT	//  res subscriber period _29
-      s1 s2 XCHG	//  res period subscriber _29
-    }>	//  res period subscriber
-    2DROP	//  res
+      SWAP	//  subscriber res period s_found
+      NOT	//  subscriber res period _38
+      s1 s3 XCHG	//  period res subscriber _38
+    }>	//  period res subscriber
+    DROP
+    NIP	//  res
   }>
 }END>c

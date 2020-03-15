@@ -17,6 +17,7 @@
     Copyright 2017-2019 Telegram Systems LLP
 */
 #include "vm/dict.h"
+#include "vm/debugops.h"
 #include "common/bigint.hpp"
 
 #include "Ed25519.h"
@@ -61,7 +62,6 @@ std::string current_dir() {
 
 
 TEST(Smartcon, Simple) {
-
 
   auto private_key = td::Ed25519::generate_private_key().move_as_ok();
   auto public_key = private_key.get_public_key().move_as_ok();

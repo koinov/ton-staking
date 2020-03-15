@@ -43,12 +43,15 @@ namespace ton {
         nominator_data.store_long(0, 8);
         block::tlb::t_Grams.store_integer_value(nominator_data, td::BigInt256(0));
         block::tlb::t_Grams.store_integer_value(nominator_data, td::BigInt256(0));
+        nominator_data.store_long(i+1, 32);
         nominators.set_builder(key.bits(), 256, nominator_data);
       }
       auto nominator_code = StakingSmartContractCode::nominator();
 
+
       vm::CellBuilder cb;
       cb.store_bits(pool_address.addr.bits(), 256);
+
       cb.ensure_throw(cb.store_maybe_ref(nominators.get_root_cell()));
       cb.ensure_throw(cb.store_maybe_ref(nominator_code));
 
@@ -126,9 +129,10 @@ namespace ton {
       auto start_period = ans.stack.write().pop_smallint_range(100000);
       auto amount = ans.stack.write().pop_int();
       auto subscriber = ans.stack.write().pop_int();
+      auto subscriber_wc = ans.stack.write().pop_smallint_range(256,-256);
       auto id = ans.stack.write().pop_smallint_range(100000);
 
-      auto res = StakingPool::Subscription{id, subscriber , amount->to_long(), static_cast<td::int16>(start_period), static_cast<td::int16>(end_period), static_cast<td::int8>(status)};
+      auto res = StakingPool::Subscription{id,  subscriber_wc, subscriber , amount->to_long(), static_cast<td::int16>(start_period), static_cast<td::int16>(end_period), static_cast<td::int8>(status)};
 
       return res;
     }
@@ -140,9 +144,12 @@ namespace ton {
       td::BigInt256 bi;
       bi.import_bits(subscriber_address.addr.as_bitslice());
 
+
+
       td::Ref<td::CntInt256> int_address_ref(bi);
       td::Ref<vm::Stack> stack_ref{true};
       vm::Stack& stack = stack_ref.write();
+      stack.push_smallint( subscriber_address.workchain );
       stack.push_int( int_address_ref );
       stack.push_smallint(period);
       stack.push_smallint(direction);
@@ -168,6 +175,7 @@ namespace ton {
       td::Ref<td::CntInt256> int_address_ref(bi);
       td::Ref<vm::Stack> stack_ref{true};
       vm::Stack& stack = stack_ref.write();
+      stack.push_smallint( subscriber_address.workchain );
       stack.push_int( int_address_ref );
       args.set_stack(stack_ref);
 

@@ -343,5 +343,7 @@ Sincerely yours, Eugene Koinov
 
 15-03-2020 Nominators addresses validation, transfer and withdrawal requests to nominators
 
+16-03-2020 Support for multiple workchains. Nominator smart contract code validation fix
+
 
 
