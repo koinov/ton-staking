@@ -309,9 +309,7 @@ External audit of this solution is extremely wanted before the launch.
 
 ### Demo
 
-Please check user interface at:
-
-http://62.210.101.33/
+Available at: https://proofvault.io
 
 Demonstational `pool` smart contract is deployed at:
 
