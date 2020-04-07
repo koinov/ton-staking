@@ -58,8 +58,8 @@ adnl.id.short id:int256 = adnl.id.Short;
 adnl.proxyToFastHash ip:int port:int date:int data_hash:int256 shared_secret:int256 = adnl.ProxyTo;
 adnl.proxyToFast ip:int port:int date:int signature:int256 = adnl.ProxyToSign;
 
-adnl.proxy.none = adnl.Proxy;
-adnl.proxy.fast shared_secret:bytes = adnl.Proxy;
+adnl.proxy.none id:int256 = adnl.Proxy;
+adnl.proxy.fast id:int256 shared_secret:bytes = adnl.Proxy;
 
 
 adnl.address.udp ip:int port:int = adnl.Address;
@@ -107,6 +107,23 @@ adnl.tunnelPacketContents
   payment:flags.3?bytes
   rand2:bytes 
         = adnl.TunnelPacketContents;
+
+
+// flag 16 - packet is outbound
+// flag 17 - control packet
+adnl.proxyPacketHeader
+  proxy_id:int256
+  flags:# 
+  ip:flags.0?int
+  port:flags.0?int
+  adnl_start_time:flags.1?int
+  seqno:flags.2?long
+  date:flags.3?int
+  signature:int256 = adnl.ProxyPacketHeader;
+
+adnl.proxyControlPacketPing id:int256 = adnl.ProxyControlPacket;
+adnl.proxyControlPacketPong id:int256 = adnl.ProxyControlPacket;
+adnl.proxyControlPacketRegister ip:int port:int = adnl.ProxyControlPacket;
 
 
 adnl.message.createChannel key:int256 date:int = adnl.Message;
@@ -581,6 +598,7 @@ engine.validator.success = engine.validator.Success;
 engine.validator.jsonConfig data:string = engine.validator.JsonConfig;
 
 engine.validator.electionBid election_date:int perm_key:int256 adnl_addr:int256 to_send_payload:bytes = engine.validator.ElectionBid; 
+engine.validator.proposalVote perm_key:int256 to_send:bytes = engine.validator.ProposalVote;
 
 engine.validator.dhtServerStatus id:int256 status:int = engine.validator.DhtServerStatus;
 engine.validator.dhtServersStatus servers:(vector engine.validator.dhtServerStatus) = engine.validator.DhtServersStatus;
@@ -621,6 +639,7 @@ engine.validator.getConfig = engine.validator.JsonConfig;
 engine.validator.setVerbosity verbosity:int = engine.validator.Success; 
 
 engine.validator.createElectionBid election_date:int election_addr:string wallet:string = engine.validator.ElectionBid;
+engine.validator.createProposalVote vote:bytes = engine.validator.ProposalVote; 
 
 engine.validator.checkDhtServers id:int256 = engine.validator.DhtServersStatus;
 

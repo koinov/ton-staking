@@ -28,6 +28,8 @@
 #include "common/bitstring.h"
 #include "common/util.h"
 
+#include "openssl/digest.hpp"
+
 #include "Ed25519.h"
 
 #include "vm/cells.h"
@@ -177,28 +179,15 @@ void interpret_divmod(vm::Stack& stack, int round_mode) {
 }
 
 void interpret_times_div(vm::Stack& stack, int round_mode) {
-  auto z = stack.pop_int();
-  auto y = stack.pop_int();
-  auto x = stack.pop_int();
-  typename td::BigInt256::DoubleInt tmp{0};
-  tmp.add_mul(*x, *y);
-  auto q = td::make_refint();
-  tmp.mod_div(*z, q.unique_write(), round_mode);
-  q.unique_write().normalize();
-  stack.push_int(std::move(q));
+  auto z = stack.pop_int(), y = stack.pop_int(), x = stack.pop_int();
+  stack.push_int(muldiv(std::move(x), std::move(y), std::move(z), round_mode));
 }
 
 void interpret_times_divmod(vm::Stack& stack, int round_mode) {
-  auto z = stack.pop_int();
-  auto y = stack.pop_int();
-  auto x = stack.pop_int();
-  typename td::BigInt256::DoubleInt tmp{0};
-  tmp.add_mul(*x, *y);
-  auto q = td::make_refint();
-  tmp.mod_div(*z, q.unique_write(), round_mode);
-  q.unique_write().normalize();
-  stack.push_int(std::move(q));
-  stack.push_int(td::make_refint(tmp));
+  auto z = stack.pop_int(), y = stack.pop_int(), x = stack.pop_int();
+  auto dm = muldivmod(std::move(x), std::move(y), std::move(z));
+  stack.push_int(std::move(dm.first));
+  stack.push_int(std::move(dm.second));
 }
 
 void interpret_times_mod(vm::Stack& stack, int round_mode) {
@@ -941,6 +930,32 @@ void interpret_concat_builders(vm::Stack& stack) {
     throw IntError{"cannot concatenate two builders"};
   }
   stack.push_builder(std::move(cb1));
+}
+
+void interpret_cell_datasize(vm::Stack& stack, int mode) {
+  auto bound = (mode & 4 ? stack.pop_int() : td::make_refint(1 << 22));
+  Ref<vm::Cell> cell;
+  Ref<vm::CellSlice> cs;
+  if (mode & 2) {
+    cs = stack.pop_cellslice();
+  } else {
+    cell = stack.pop_maybe_cell();
+  }
+  if (!bound->is_valid() || bound->sgn() < 0) {
+    throw IntError{"finite non-negative integer expected"};
+  }
+  vm::VmStorageStat stat{bound->unsigned_fits_bits(63) ? bound->to_long() : (1ULL << 63) - 1};
+  bool ok = (mode & 2 ? stat.add_storage(cs.write()) : stat.add_storage(std::move(cell)));
+  if (ok) {
+    stack.push_smallint(stat.cells);
+    stack.push_smallint(stat.bits);
+    stack.push_smallint(stat.refs);
+  } else if (!(mode & 1)) {
+    throw IntError{"scanned too many cells"};
+  }
+  if (mode & 1) {
+    stack.push_bool(ok);
+  }
 }
 
 void interpret_slice_bitrefs(vm::Stack& stack, int mode) {
@@ -2243,9 +2258,11 @@ std::vector<Ref<vm::Cell>> get_vm_libraries() {
 // +32 = return c5 (actions)
 // +64 = log vm ops to stderr
 // +128 = pop hard gas limit (enabled by ACCEPT) from stack as well
+// +256 = enable stack trace
+// +512 = enable debug instructions
 void interpret_run_vm(IntCtx& ctx, int mode) {
   if (mode < 0) {
-    mode = ctx.stack.pop_smallint_range(0xff);
+    mode = ctx.stack.pop_smallint_range(0x3ff);
   }
   bool with_data = mode & 4;
   Ref<vm::Tuple> c7;
@@ -2267,8 +2284,8 @@ void interpret_run_vm(IntCtx& ctx, int mode) {
   OstreamLogger ostream_logger(ctx.error_stream);
   auto log = create_vm_log((mode & 64) && ctx.error_stream ? &ostream_logger : nullptr);
   vm::GasLimits gas{gas_limit, gas_max};
-  int res =
-      vm::run_vm_code(cs, ctx.stack, mode & 3, &data, log, nullptr, &gas, get_vm_libraries(), std::move(c7), &actions);
+  int res = vm::run_vm_code(cs, ctx.stack, (mode & 3) | ((mode & 0x300) >> 6), &data, log, nullptr, &gas,
+                            get_vm_libraries(), std::move(c7), &actions);
   ctx.stack.push_smallint(res);
   if (with_data) {
     ctx.stack.push_cell(std::move(data));
@@ -2766,6 +2783,8 @@ void init_words_common(Dictionary& d) {
   d.def_stack_word("sbits ", std::bind(interpret_slice_bitrefs, _1, 1));
   d.def_stack_word("srefs ", std::bind(interpret_slice_bitrefs, _1, 2));
   d.def_stack_word("sbitrefs ", std::bind(interpret_slice_bitrefs, _1, 3));
+  d.def_stack_word("totalcsize ", std::bind(interpret_cell_datasize, _1, 0));
+  d.def_stack_word("totalssize ", std::bind(interpret_cell_datasize, _1, 2));
   // boc manipulation
   d.def_stack_word("B>boc ", interpret_boc_deserialize);
   d.def_stack_word("boc>B ", interpret_boc_serialize);

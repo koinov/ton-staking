@@ -39,6 +39,12 @@ namespace validator {
 using td::Ref;
 
 class Collator final : public td::actor::Actor {
+  static constexpr int supported_version() {
+    return 2;
+  }
+  static constexpr long long supported_capabilities() {
+    return ton::capCreateStatsEnabled | ton::capBounceMsgBody | ton::capReportVersion | ton::capShortDequeue;
+  }
   using LtCellRef = block::LtCellRef;
   using NewOutMsg = block::NewOutMsg;
   const ShardIdFull shard;
@@ -53,6 +59,7 @@ class Collator final : public td::actor::Actor {
   bool preinit_complete{false};
   bool is_key_block_{false};
   bool block_full_{false};
+  bool outq_cleanup_partial_{false};
   bool inbound_queues_empty_{false};
   bool libraries_changed_{false};
   bool prev_key_block_exists_{false};
@@ -137,6 +144,10 @@ class Collator final : public td::actor::Actor {
   bool shard_conf_adjusted_{false};
   bool ihr_enabled_{false};
   bool create_stats_enabled_{false};
+  bool report_version_{false};
+  bool skip_topmsgdescr_{false};
+  bool skip_extmsg_{false};
+  bool short_dequeue_records_{false};
   td::uint64 overload_history_{0}, underload_history_{0};
   td::uint64 block_size_estimate_{};
   Ref<block::WorkchainInfo> wc_info_;
@@ -265,6 +276,7 @@ class Collator final : public td::actor::Actor {
   bool delete_out_msg_queue_msg(td::ConstBitPtr key);
   bool insert_in_msg(Ref<vm::Cell> in_msg);
   bool insert_out_msg(Ref<vm::Cell> out_msg);
+  bool insert_out_msg(Ref<vm::Cell> out_msg, td::ConstBitPtr msg_hash);
   bool register_out_msg_queue_op(bool force = false);
   bool update_min_mc_seqno(ton::BlockSeqno some_mc_seqno);
   bool combine_account_transactions();
@@ -286,6 +298,7 @@ class Collator final : public td::actor::Actor {
   bool store_master_ref(vm::CellBuilder& cb);
   bool store_prev_blk_ref(vm::CellBuilder& cb, bool after_merge);
   bool store_zero_state_ref(vm::CellBuilder& cb);
+  bool store_version(vm::CellBuilder& cb) const;
   bool create_block_info(Ref<vm::Cell>& block_info);
   bool check_value_flow();
   bool create_block_extra(Ref<vm::Cell>& block_extra);

@@ -14,12 +14,13 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #include "validator-group.hpp"
 #include "fabric.h"
 #include "ton/ton-io.hpp"
 #include "td/utils/overloaded.h"
+#include "common/delay.h"
 
 namespace ton {
 
@@ -50,8 +51,12 @@ void ValidatorGroup::validate_block_candidate(td::uint32 round_id, BlockCandidat
       if (S.code() != ErrorCode::timeout && S.code() != ErrorCode::notready) {
         LOG(ERROR) << "failed to validate candidate: " << S;
       }
-      td::actor::send_closure(SelfId, &ValidatorGroup::validate_block_candidate, round_id, std::move(block),
-                              std::move(promise));
+      delay_action(
+          [SelfId, round_id, block = std::move(block), promise = std::move(promise)]() mutable {
+            td::actor::send_closure(SelfId, &ValidatorGroup::validate_block_candidate, round_id, std::move(block),
+                                    std::move(promise));
+          },
+          td::Timestamp::in(0.1));
     } else {
       auto v = R.move_as_ok();
       v.visit(td::overloaded([&](UnixTime ts) { promise.set_result(ts); },
@@ -237,7 +242,7 @@ void ValidatorGroup::create_session() {
 
   session_ = validatorsession::ValidatorSession::create(session_id_, config_, local_id_, std::move(vec),
                                                         make_validator_session_callback(), keyring_, adnl_, rldp_,
-                                                        overlays_, db_root_);
+                                                        overlays_, db_root_, allow_unsafe_self_blocks_resync_);
   if (prev_block_ids_.size() > 0) {
     td::actor::send_closure(session_, &validatorsession::ValidatorSession::start);
   }

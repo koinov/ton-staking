@@ -14,7 +14,7 @@
     You should have received a copy of the GNU Lesser General Public License
     along with TON Blockchain Library.  If not, see <http://www.gnu.org/licenses/>.
 
-    Copyright 2017-2019 Telegram Systems LLP
+    Copyright 2017-2020 Telegram Systems LLP
 */
 #pragma once
 
@@ -91,6 +91,17 @@ struct ValidatorManagerOptionsImpl : public ValidatorManagerOptions {
   td::uint32 get_filedb_depth() const override {
     return db_depth_;
   }
+  bool check_unsafe_resync_allowed(CatchainSeqno seqno) const override {
+    return unsafe_catchains_.count(seqno) > 0;
+  }
+  td::uint32 check_unsafe_catchain_rotate(BlockSeqno seqno, CatchainSeqno cc_seqno) const override {
+    auto it = unsafe_catchain_rotates_.find(cc_seqno);
+    if (it == unsafe_catchain_rotates_.end()) {
+      return 0;
+    } else {
+      return it->second.first <= seqno ? it->second.second : 0;
+    }
+  }
 
   void set_zero_block_id(BlockIdExt block_id) override {
     zero_block_id_ = block_id;
@@ -129,6 +140,12 @@ struct ValidatorManagerOptionsImpl : public ValidatorManagerOptions {
     CHECK(value <= 32);
     db_depth_ = value;
   }
+  void add_unsafe_resync_catchain(CatchainSeqno seqno) override {
+    unsafe_catchains_.insert(seqno);
+  }
+  void add_unsafe_catchain_rotate(BlockSeqno seqno, CatchainSeqno cc_seqno, td::uint32 value) override {
+    unsafe_catchain_rotates_[cc_seqno] = std::make_pair(seqno, value);
+  }
 
   ValidatorManagerOptionsImpl *make_copy() const override {
     return new ValidatorManagerOptionsImpl(*this);
@@ -164,6 +181,8 @@ struct ValidatorManagerOptionsImpl : public ValidatorManagerOptions {
   bool initial_sync_disabled_;
   std::vector<BlockIdExt> hardforks_;
   td::uint32 db_depth_ = 2;
+  std::set<CatchainSeqno> unsafe_catchains_;
+  std::map<CatchainSeqno, std::pair<BlockSeqno, td::uint32>> unsafe_catchain_rotates_;
 };
 
 }  // namespace validator
