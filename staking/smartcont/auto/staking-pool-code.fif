@@ -1233,8 +1233,7 @@ PROGRAM{
       IF:<{	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code nominator nominator_address s_found
         s0 s2 XCHG	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator
         unpack_nominator INLINECALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address _147 _148 _149 _150
-        s0 s3 XCHG
-        3 BLKDROP	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx
+        3 1 BLKDROP2	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx
         s3 s5 s0 PUSH3	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx nominator_code pool_address nominator_idx
         calculate_nominator_address CALLDICT	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx hash
         s2 PUSH	//  owner current_period transaction_fee min_amount owner_fee penalty_fee pool_address nominators nominator_code s_found nominator_address nominator_idx hash nominator_address
@@ -1360,8 +1359,7 @@ PROGRAM{
     4 BLKDROP	//  pool_config
     CTOS	//  _13
     unpack_pool_config INLINECALLDICT	//  _20 _21 _22 _23 _24 _25 _26
-    s0 s6 XCHG
-    6 BLKDROP	//  nominators
+    6 1 BLKDROP2	//  nominators
   }>
   get_subscriptions_count PROC:<{
     // 
@@ -1437,8 +1435,7 @@ PROGRAM{
     s0 s2 XCHG	//  nominator_address direction nominator s_found=0 pool_config
     CTOS	//  nominator_address direction nominator s_found=0 _19
     unpack_pool_config INLINECALLDICT	//  nominator_address direction nominator s_found=0 _48 _49 _50 _51 _52 _53 _54
-    s0 s6 XCHG
-    6 BLKDROP	//  nominator_address direction nominator s_found=0 nominators
+    6 1 BLKDROP2	//  nominator_address direction nominator s_found=0 nominators
     s3 PUSH	//  nominator_address direction nominator s_found=0 nominators direction
     0 EQINT	//  nominator_address direction nominator s_found=0 nominators _22
     IF:<{	//  nominator_address direction nominator s_found=0 nominators
@@ -1529,8 +1526,7 @@ PROGRAM{
   get_subscribers_subscription PROC:<{
     //  subscribers_wc subscriber_address period direction
     unpack_state INLINECALLDICT	//  subscribers_wc subscriber_address period direction _47 _48 _49 _50 _51
-    s0 s4 XCHG
-    4 BLKDROP	//  subscribers_wc subscriber_address period direction subscribers
+    4 1 BLKDROP2	//  subscribers_wc subscriber_address period direction subscribers
     PUSHNULL	//  subscribers_wc subscriber_address period direction subscribers subscriber_entry_s
     s0 s5 XCHG
     NEWC	//  subscriber_entry_s subscriber_address period direction subscribers subscribers_wc _15
@@ -1598,8 +1594,7 @@ PROGRAM{
   get_subscribers_subscriptions PROC:<{
     //  subscriber_wc subscriber_address
     unpack_state INLINECALLDICT	//  subscriber_wc subscriber_address _39 _40 _41 _42 _43
-    s0 s4 XCHG
-    4 BLKDROP	//  subscriber_wc subscriber_address subscribers
+    4 1 BLKDROP2	//  subscriber_wc subscriber_address subscribers
     PUSHNULL	//  subscriber_wc subscriber_address subscribers res
     0 PUSHINT	//  subscriber_wc subscriber_address subscribers res period=0
     s0 s4 XCHG

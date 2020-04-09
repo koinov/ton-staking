@@ -16,7 +16,7 @@
 
     Copyright 2017-2019 Telegram Systems LLP
 */
-#include "WalletV3.h"
+#include "WalletV3O.h"
 #include "GenericAccount.h"
 
 #include "vm/boc.h"
@@ -26,13 +26,13 @@
 #include <limits>
 
 namespace ton {
-td::Ref<vm::Cell> WalletV3::get_init_state(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept {
+td::Ref<vm::Cell> WalletV3O::get_init_state(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept {
   auto code = get_init_code();
   auto data = get_init_data(public_key, wallet_id);
   return GenericAccount::get_init_state(std::move(code), std::move(data));
 }
 
-td::Ref<vm::Cell> WalletV3::get_init_message(const td::Ed25519::PrivateKey& private_key,
+td::Ref<vm::Cell> WalletV3O::get_init_message(const td::Ed25519::PrivateKey& private_key,
                                              td::uint32 wallet_id) noexcept {
   td::uint32 seqno = 0;
   td::uint32 valid_until = std::numeric_limits<td::uint32>::max();
@@ -54,7 +54,7 @@ td::Ref<vm::Cell> WalletV3::get_init_message(const td::Ed25519::PrivateKey& priv
       .finalize();
 }
 
-td::Ref<vm::Cell> WalletV3::make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
+td::Ref<vm::Cell> WalletV3O::make_a_gift_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
                                                 td::uint32 seqno, td::uint32 valid_until, td::int64 gramms,
                                                 td::Slice message, const block::StdAddress& dest_address) noexcept {
   td::int32 send_mode = 3;
@@ -79,7 +79,7 @@ td::Ref<vm::Cell> WalletV3::make_a_gift_message(const td::Ed25519::PrivateKey& p
   return vm::CellBuilder().store_bytes(signature).append_cellslice(vm::load_cell_slice(message_outer)).finalize();
 }
 
-td::Ref<vm::Cell> WalletV3::make_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
+td::Ref<vm::Cell> WalletV3O::make_message(const td::Ed25519::PrivateKey& private_key, td::uint32 wallet_id,
                                                 td::uint32 seqno, td::uint32 valid_until, td::int64 gramms,
                                                 td::Slice message, const block::StdAddress& dest_address) noexcept {
   td::int32 send_mode = 3;
@@ -104,7 +104,7 @@ td::Ref<vm::Cell> WalletV3::make_message(const td::Ed25519::PrivateKey& private_
 }
 
 
-td::Ref<vm::Cell> WalletV3::get_init_code() noexcept {
+td::Ref<vm::Cell> WalletV3O::get_init_code() noexcept {
   static auto res = [] {
     auto serialized_code = td::base64_decode(
                                "te6ccgEBBgEAcwABFP8A9KQT9KDyyAsBAgEgAgMCAUgEBQCW8oMI1xgg0x/TH9Mf+CMTu/Jj7UTQ0x/TH9P/0VEyuvKhUUS68qIE+QFUEFX5EPKj+ACTINdKltMH1AL7AOgwAaTIyx/LH8v/ye1UAATQMAARoJkv2omhrhY/")
@@ -114,11 +114,11 @@ td::Ref<vm::Cell> WalletV3::get_init_code() noexcept {
   return res;
 }
 
-vm::CellHash WalletV3::get_init_code_hash() noexcept {
+vm::CellHash WalletV3O::get_init_code_hash() noexcept {
   return get_init_code()->get_hash();
 }
 
-td::Ref<vm::Cell> WalletV3::get_init_data(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept {
+td::Ref<vm::Cell> WalletV3O::get_init_data(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept {
   return vm::CellBuilder()
       .store_long(0, 32)
       .store_long(wallet_id, 32)
@@ -126,11 +126,11 @@ td::Ref<vm::Cell> WalletV3::get_init_data(const td::Ed25519::PublicKey& public_k
       .finalize();
 }
 
-td::Result<td::uint32> WalletV3::get_seqno() const {
+td::Result<td::uint32> WalletV3O::get_seqno() const {
   return TRY_VM(get_seqno_or_throw());
 }
 
-td::Result<td::uint32> WalletV3::get_seqno_or_throw() const {
+td::Result<td::uint32> WalletV3O::get_seqno_or_throw() const {
   if (state_.data.is_null()) {
     return 0;
   }
@@ -138,11 +138,11 @@ td::Result<td::uint32> WalletV3::get_seqno_or_throw() const {
   return static_cast<td::uint32>(vm::load_cell_slice(state_.data).fetch_ulong(32));
 }
 
-td::Result<td::uint32> WalletV3::get_wallet_id() const {
+td::Result<td::uint32> WalletV3O::get_wallet_id() const {
   return TRY_VM(get_wallet_id_or_throw());
 }
 
-td::Result<td::uint32> WalletV3::get_wallet_id_or_throw() const {
+td::Result<td::uint32> WalletV3O::get_wallet_id_or_throw() const {
   if (state_.data.is_null()) {
     return 0;
   }

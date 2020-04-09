@@ -26,7 +26,7 @@
 #include <map>
 
 #include <staking/staking-smc-envelope/GenericAccount.h>
-#include <staking/staking-smc-envelope/WalletV3.h>
+#include <staking/staking-smc-envelope/WalletV3O.h>
 // #include <staking/staking-smc-envelope/MultisigWallet.h>
 #include "staking/staking-smc-envelope/StakingPool.h"
 #include "staking/staking-smc-envelope/Nominator.h"

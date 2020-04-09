@@ -9,12 +9,12 @@ set(STAKING_SMC_ENVELOPE_SOURCE
   staking-smc-envelope/StakingSmartContractCode.cpp
   staking-smc-envelope/StakingPool.cpp
   staking-smc-envelope/Nominator.cpp
-  staking-smc-envelope/WalletV3.cpp
+        staking-smc-envelope/WalletV3O.cpp
 
   staking-smc-envelope/GenericAccount.h
   staking-smc-envelope/StakingSmartContract.h
   staking-smc-envelope/StakingSmartContractCode.h
-  staking-smc-envelope/WalletV3.h
+        staking-smc-envelope/WalletV3O.h
   staking-smc-envelope/StakingPool.h
   staking-smc-envelope/Nominator.h
 )

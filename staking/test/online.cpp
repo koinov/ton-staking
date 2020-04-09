@@ -42,7 +42,7 @@
 #include "smc-envelope/TestWallet.h"
 #include "smc-envelope/ManualDns.h"
 
-#include "staking-smc-envelope/WalletV3.h"
+#include "staking-smc-envelope/WalletV3O.h"
 #include "staking-smc-envelope/Nominator.h"
 #include "staking-smc-envelope/StakingPool.h"
 
