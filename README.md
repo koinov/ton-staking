@@ -344,5 +344,5 @@ Sincerely yours, Eugene Koinov
 
 16-03-2020 Support for multiple workchains. Nominator smart contract code validation fix
 
-
+09-04-2020 Updated to the latest TONLIB, backend is up and running
 

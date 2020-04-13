@@ -25,9 +25,9 @@
 #include "vm/cells/CellString.h"
 
 namespace ton {
-class WalletV3 : public ton::StakingSmartContract {
+class WalletV3O : public ton::StakingSmartContract {
  public:
-  explicit WalletV3(State state) : ton::StakingSmartContract(std::move(state)) {
+  explicit WalletV3O(State state) : ton::StakingSmartContract(std::move(state)) {
   }
   static constexpr unsigned max_message_size = vm::CellString::max_bytes;
   static td::Ref<vm::Cell> get_init_state(const td::Ed25519::PublicKey& public_key, td::uint32 wallet_id) noexcept;

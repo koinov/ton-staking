@@ -37,7 +37,7 @@
 #include "staking-smc-envelope/StakingSmartContract.h"
 #include "staking-smc-envelope/StakingPool.h"
 #include "staking-smc-envelope/Nominator.h"
-#include "staking-smc-envelope/WalletV3.h"
+#include "staking-smc-envelope/WalletV3O.h"
 
 #include "td/utils/base64.h"
 #include "td/utils/crypto.h"

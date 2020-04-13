@@ -26,7 +26,7 @@
 #include <map>
 
 #include <staking/staking-smc-envelope/GenericAccount.h>
-#include <staking/staking-smc-envelope/WalletV3.h>
+#include <staking/staking-smc-envelope/WalletV3O.h>
 // #include <staking/staking-smc-envelope/MultisigWallet.h>
 #include "staking/staking-smc-envelope/StakingPool.h"
 #include "staking/staking-smc-envelope/Nominator.h"
@@ -1070,7 +1070,7 @@ class TonlibCli : public td::actor::Actor {
                       auto pool = ton::StakingPool(
                           ton::StakingSmartContract::State{
                               ton::StakingPool::get_init_code(),
-                              ton::StakingPool::get_init_data(owner_raw_address, 500, 1000000),
+                              ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_raw_address ),
                           });
 
                       auto pool_raw_address = pool.get_address(0);
@@ -1102,7 +1102,7 @@ class TonlibCli : public td::actor::Actor {
                     auto pool = ton::StakingPool(
                         ton::StakingSmartContract::State{
                             ton::StakingPool::get_init_code(),
-                            ton::StakingPool::get_init_data(owner_raw_address, 500, 1000000),
+                            ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_raw_address),
                         });
 
                     auto pool_raw_address = pool.get_address(0);
@@ -1215,7 +1215,7 @@ class TonlibCli : public td::actor::Actor {
               auto pool = ton::StakingPool(
                   ton::StakingSmartContract::State{
                       ton::StakingPool::get_init_code(),
-                      ton::StakingPool::get_init_data(owner_raw_address, 500, 1000000),
+                      ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_raw_address),
                   });
 
               auto pool_raw_address = pool.get_address(0);
@@ -1244,7 +1244,7 @@ class TonlibCli : public td::actor::Actor {
               auto pool = ton::StakingPool(
                   ton::StakingSmartContract::State{
                       ton::StakingPool::get_init_code(),
-                      ton::StakingPool::get_init_data(owner_raw_address, 500, 1000000),
+                      ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_raw_address),
                   });
 
               auto pool_raw_address = pool.get_address(0);
@@ -1624,7 +1624,7 @@ class TonlibCli : public td::actor::Actor {
                        auto owner_address = ton::GenericAccount::get_address(ton::basechainId, ton::GenericAccount::get_init_state(owner_init_code, owner_init_data));
 
                        init_code = ton::StakingPool::get_init_code();
-                       init_data = ton::StakingPool::get_init_data(owner_address,500, 1000000);
+                       init_data = ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_address);
                        auto pool_address = ton::GenericAccount::get_address(ton::basechainId, ton::GenericAccount::get_init_state(init_code, init_data));
 
                        std::vector<block::StdAddress> nominators;
@@ -1635,7 +1635,7 @@ class TonlibCli : public td::actor::Actor {
                          auto nominator_address = ton::GenericAccount::get_address(ton::basechainId, ton::GenericAccount::get_init_state(nominator_code, nominator_data));
                          nominators.push_back(nominator_address);
                        }
-                       init_message = ton::StakingPool::get_init_message(nominators);
+                       init_message = ton::StakingPool::get_init_message(pool_address, &nominators);
                    }
                      if( smc_type == "nominator" && wallet_idx != 0) {
                        auto owner_init_code = ton::WalletV3::get_init_code();
@@ -1643,7 +1643,7 @@ class TonlibCli : public td::actor::Actor {
                        auto owner_address = ton::GenericAccount::get_address(ton::basechainId, ton::GenericAccount::get_init_state(owner_init_code, owner_init_data));
 
                        init_code = ton::StakingPool::get_init_code();
-                       init_data = ton::StakingPool::get_init_data(owner_address,500, 1000000);
+                       init_data = ton::StakingPool::get_init_data(1000, 10000, 500, 500, owner_address);
                        auto pool_address = ton::GenericAccount::get_address(ton::basechainId, ton::GenericAccount::get_init_state(init_code, init_data));
 
                        std::vector<block::StdAddress> nominators;
